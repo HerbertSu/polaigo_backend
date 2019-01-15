@@ -2,6 +2,7 @@ const fetch = require('node-fetch');
 const express = require('express');
 const parseString = require('xml2js').parseString;
 const fs = require('fs');
+const util = require('util');
 const app = express();
 
 
@@ -24,7 +25,24 @@ const app = express();
 //         })
 //     })
 
-let xmlCR = fs.readFileSync("./test/CREC-2018-12-21.txt");
-console.log(xmlCR.toString());
+let xmlCR = fs.readFileSync("./test/CREC-2018-12-21.txt").toString();
+let billCount = 0;
+// console.log(xmlCR)
+parseString(xmlCR, {
+    trim: true, 
+    attrkey: 'attr', 
+    tagNameProcessors: function (name){
+        if(String(name) == "bill"){
+            billCount = billCount + 1;
+        }
+        console.log(name)
+        return name;}
+    }, function (err, result){
+    // console.dir(Object.keys(result.mods))
+    // console.log(Object.values(result.mods)[15])
+    // console.log(util.inspect(Object.values(result.mods)[15], false, null))
+})
+
+console.log(billCount)
 
 app.listen(3000);
