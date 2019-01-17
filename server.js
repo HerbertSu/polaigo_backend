@@ -31,11 +31,96 @@ let xmlCR = fs.readFileSync("./test/CREC-2018-12-21.txt").toString();
 //Object.keys(result.mods)) returns an array of the unique keys of the keys in the object that is the value to "mods"
 
 
+async function parseCRECForDailyDigest(relatedItems, relatedObjects, dailyDigestIDs, markedRelatedItems){
+    //Grabbing the items the daily digest items from the cumulative CREC and
+        //storing them in arrays
+    console.log("parse running")
+
+    if(relatedItems.length > 0){
+        for(let j = 0; j < relatedObjects.length; j++){
+            if(relatedObjects[j].attr.ID.includes("PgD") ){
+                let includes = false;
+                for(let z = 0; z < dailyDigestIDs.length; z++){
+                    if(relatedObjects[j].attr.ID.includes(dailyDigestIDs[z])){
+                        includes = true;
+                        break;
+                    }
+                }
+                if(includes === false){
+                    dailyDigestIDs.push(relatedObjects[j].attr.ID);
+                    markedRelatedItems.push(relatedObjects[j]);
+                }
+            }
+        }
+    }
+
+    if(dailyDigestIDs.length > 0 && markedRelatedItems.length > 0){
+        return [dailyDigestIDs, markedRelatedItems];
+    }
+}
+
+
+
+async function parseDailyDigestForLinks(markedRelatedItems){
+    //Retrieving the html links for all of the daily digest pages referrenced
+    let dailyDigestHTMLLinks = [];
+    markedRelatedItems.forEach( dailyDigestObject => {
+        let relatedItemsArray = dailyDigestObject.relatedItem;
+        
+
+        for(let i = 0; i < relatedItemsArray.length; i++){
+            if(relatedItemsArray[i].attr.type == "otherFormat"){
+                
+                if(relatedItemsArray[i].attr['xlink:href'].includes("html")){
+                    dailyDigestHTMLLinks.push(relatedItemsArray[i].attr['xlink:href'])
+                }
+            }
+        }
+    })
+
+    return dailyDigestHTMLLinks;
+}
+
+
+async function fetchDailyDigests(dailyDigestHTMLLinks){
+    //Visit each link and see if it contains NEW PUBLIC LAWS, what the HR voted, 
+        //what the HR passed, what the HR failed to pass, what the Senate passed,
+        //what the Senate failed to pass
+    dailyDigestHTMLLinks.forEach((link)=>{
+        fetch(link)
+            .then(res => res.text())
+            .then(dailyDigest => {
+                console.log(dailyDigest)
+                let urlParameters = link.split("/");
+                    let newLawsFileName = "";
+                    for(let parameter = 0; parameter < urlParameters.length; parameter++){
+                        if(urlParameters[parameter].includes("PgD")){
+                            newLawsFileName = urlParameters[parameter];
+                        }
+                    }
+                
+                if(dailyDigest.includes("NEW PUBLIC LAWS") 
+                    || dailyDigest.includes("House of Representatives")
+                    || dailyDigest.includes("Senate")){
+
+                    fs.writeFile(`./test/${newLawsFileName}`, dailyDigest, err=>{
+                        if(err){
+                            console.log(err) 
+                        } 
+                    })
+                }
+            })
+
+    })
+}
+
+
 parseString(xmlCR, {
         trim: true, 
         attrkey: 'attr',
     }, 
     function (err, result){
+        console.log("parseString running")
         let mods = result.mods;
         let modsKeys = Object.keys(mods);
         let modsValues = Object.values(mods);
@@ -43,7 +128,10 @@ parseString(xmlCR, {
         // let relatedItems = modsEntries[15]; // pick out related items
         let relatedItems = [];
         let relatedObjects = [];
+        let markedRelatedItems = [];
         let dailyDigestIDs = [];
+        let dailyDigestHTMLLinks = [];
+        
 
         for(let i = 0; i < modsEntries.length; i++){
             if(modsEntries[i][0] === 'relatedItem'){
@@ -53,28 +141,33 @@ parseString(xmlCR, {
             }
         }
         
-        if(relatedItems.length > 0){
-            console.log("nonzero related items")
-            // console.log(relatedObjects)
-            for(let j = 0; j < relatedObjects.length; j++){
-                // console.log(relatedObjects[j].attr.ID)
-                if(relatedObjects[j].attr.ID.includes("PgD") ){
-                    let includes = false;
-                    for(let z = 0; z < dailyDigestIDs.length; z++){
-                        if(relatedObjects[j].attr.ID.includes(dailyDigestIDs[z])){
-                            includes = true;
-                            break;
-                        }
-                    }
-                    if(includes === false){
-                        dailyDigestIDs.push(relatedObjects[j].attr.ID);
-                    }
-                }
-            }
-        }
+        //-----------------------Uncomment to fetch daily digests---------------
+        // parseCRECForDailyDigest(relatedItems, relatedObjects, dailyDigestIDs, markedRelatedItems)
+        //     .then(res=>{
+        //         dailyDigestIDs = res[0];
+        //         markedRelatedItems = res[1];
+        //         return;
+        //     })        
 
-        console.log("-------------------------------THE RESULT----------------------------\n",
-            dailyDigestIDs)
+        // parseDailyDigestForLinks(markedRelatedItems)
+        //     .then(res=>{
+        //         dailyDigestHTMLLinks = res;
+        //         fetchDailyDigests(dailyDigestHTMLLinks);
+        //     });
+        
+        // let newLawsDailyDigest = fs.readFileSync("./test/CREC-2018-12-21-pt1-PgD1317.htm").toString();
+        // let senateDailyDigest = fs.readFileSync("./test/CREC-2018-12-21-pt1-PgD1313.htm").toString();
+        let hrDailyDigest = fs.readFileSync("./test/CREC-2018-12-21-pt1-PgD1314.htm").toString();
+        // console.log(hrDailyDigest)
+        let hrDailyDigestItems = hrDailyDigest.split('\n');
+        console.log(hrDailyDigestItems)
+
+        
+        
+
+        // console.log("-------------------------------THE RESULT----------------------------\n",
+        //     "digestIDs ",dailyDigestIDs,
+        //     "\nrelatedItems objects", markedRelatedItems)
         
         // console.log("-------------------------------THE RESULT----------------------------\n",
         // // relatedItems[1][2].attr
