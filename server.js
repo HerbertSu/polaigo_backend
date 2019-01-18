@@ -5,6 +5,9 @@ const fs = require('fs');
 const util = require('util');
 const app = express();
 
+const jsdom = require('jsdom');
+const {JSDOM} = jsdom;
+
 
 // app.get("https://api.govinfo.gov/packages/CREC-2018-12-21/mods?api_key=UPY9jQU6CVq80XXWXWoDZzQ7JTm29GsvdJzACahT", (req, res) => {
 //     res.send("hello")
@@ -120,7 +123,6 @@ parseString(xmlCR, {
         attrkey: 'attr',
     }, 
     function (err, result){
-        console.log("parseString running")
         let mods = result.mods;
         let modsKeys = Object.keys(mods);
         let modsValues = Object.values(mods);
@@ -158,11 +160,128 @@ parseString(xmlCR, {
         // let newLawsDailyDigest = fs.readFileSync("./test/CREC-2018-12-21-pt1-PgD1317.htm").toString();
         // let senateDailyDigest = fs.readFileSync("./test/CREC-2018-12-21-pt1-PgD1313.htm").toString();
         let hrDailyDigest = fs.readFileSync("./test/CREC-2018-12-21-pt1-PgD1314.htm").toString();
-        // console.log(hrDailyDigest)
-        let hrDailyDigestItems = hrDailyDigest.split('\n');
-        console.log(hrDailyDigestItems)
-
+        const dom = new JSDOM(hrDailyDigest);
         
+        let body = dom.window.document.querySelector("pre").textContent;
+        
+        let hrDailyDigestItems = body.split('  ');
+        let paragraphs = hrDailyDigestItems.filter(item => item.length > 0);
+        
+
+        //Some elements of the paragraphs at this point may have pages that are connected
+            //to the beginning of new messages separated only by a newline character
+        for(let i = 0; i < paragraphs.length; i++){
+            if(paragraphs[i].slice(0,4) == "Page"){
+                //Separate the page numbers (eg. H12345-67) from any tagalongs 
+                paragraphs[i] = paragraphs[i].split("\n");
+                //Join the remaining entries such they are full paragraphs in a single string
+                let remainder = paragraphs[i].slice(1, paragraphs[i].length - 1);
+                remainder = remainder.filter(item => item.length > 0);
+                remainder = remainder.join(" "); 
+                paragraphs[i] = [paragraphs[i][0], remainder];
+
+            }else{
+                //Clean regular paragraphs of the newline character
+                paragraphs[i] = paragraphs[i].split("\n");
+                
+                paragraphs[i] = paragraphs[i].join(" "); 
+            }
+        }
+
+        let indicator = true;
+        let i = 0;
+        while(indicator){
+            if(Array.isArray(paragraphs[i])){
+                paragraphs.splice(i + 1, 0, paragraphs[i][1]);
+                paragraphs[i] = paragraphs[i][0];
+                i++;
+            }
+            i++;
+            if(i > paragraphs.length){
+                indicator = false;
+            }
+        }
+        paragraphs = paragraphs.filter(item => item.length > 0);
+
+        const HR_DAILY_DIGEST_TAGS = {
+            publicBills : "Public Bills and Resolutions Introduced", 
+            coSponsors : "Additional Cosponsors",
+            reports : "Reports Filed",
+            journal : "Journal",
+            passedMeasures : "Suspensions: The House agreed",
+            failedMeasures: "Suspension: The House failed",
+            orderBusiness : "Order of Business",
+            recess : "Recess",
+            senateReferral : "Senate Referral", 
+            senateMessage : "Senate Message",
+            quorumCallsVotes : "Quorum Calls--Votes",
+            adjournment : "Adjournment",
+            nextMeeting : "Motion to Fix Next Convening Time"
+        };
+
+        let hrDailyDigestObject = {};
+
+        let hrDailyDigestEntries = Object.entries(HR_DAILY_DIGEST_TAGS);
+        
+        let currentTag = "";
+
+        paragraphs.forEach((element) => {
+            
+            for(let i = 0; i < hrDailyDigestEntries.length; i++){
+                if(element.includes(hrDailyDigestEntries[i][1])){
+                    currentTag = hrDailyDigestEntries[i][0];
+                    if(hrDailyDigestObject[hrDailyDigestEntries[i][0]] == undefined){
+
+                        hrDailyDigestObject[hrDailyDigestEntries[i][0]] = [];
+                        console.log("PRINTING", hrDailyDigestObject)
+                    }
+                    break;
+                }
+            }
+            if(currentTag.length > 0){
+                hrDailyDigestObject[currentTag].push(element);
+            }
+        });
+        
+        console.log(hrDailyDigestObject)
+
+        //     // if(element.includes(HR_DAILY_DIGEST_TAGS.passedMeasures)){
+        //     //     if(hrDailyDigestObject["passedMeasures"] !== undefined){
+        //     //         hrDailyDigestObject["passedMeasures"] = hrDailyDigestObject["passedMeasures"] + element;
+                    
+        //     //     }else{
+        //     //         hrDailyDigestObject["passedMeasures"] = element;
+                    
+        //     //     }
+        //     // }else if(element.includes(HR_DAILY_DIGEST_TAGS.failedMeasures)){
+        //     //     if(hrDailyDigestObject["failedMeasures"] !== undefined){
+        //     //         hrDailyDigestObject["failedMeasures"] = hrDailyDigestObject["failedMeasures"] + element;
+                    
+        //     //     }else{
+        //     //         hrDailyDigestObject["failedMeasures"] = element;
+                    
+        //     //     }
+        //     // } else {
+                
+        //     // }
+        // })
+
+        // console.log(hrDailyDigestObject)
+
+        /*
+        House of Representative Daily Digest Possible Items
+            Public Bills and Resolutions Introduced: 
+            Additional Cosponsors:
+            Reports Filed: 
+            Journal: 
+            Suspensions:
+            Order of Business:
+            Recess: 
+            Senate Referral:    
+            Senate Message: 
+            Quorum Calls--Votes:
+            Adjournment:
+        */
         
 
         // console.log("-------------------------------THE RESULT----------------------------\n",
