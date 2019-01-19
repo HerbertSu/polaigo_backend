@@ -5,6 +5,8 @@ const fs = require('fs');
 const util = require('util');
 const app = express();
 
+// const parseCRECForDailyDigest = require('./scripts/DailyDigest/parseCRECForDailyDigest');
+
 const jsdom = require('jsdom');
 const {JSDOM} = jsdom;
 
@@ -118,6 +120,54 @@ async function fetchDailyDigests(dailyDigestHTMLLinks){
 }
 
 
+async function parseHouseActionedMeasures(hrDailyDigestObject, measure, listOfMeasureObjects, measureObject){
+    for(let entry = 0; entry < hrDailyDigestObject.measure.length; entry++){
+        if(hrDailyDigestObject.measure[entry].includes("Suspensions: The House")){ 
+        } else {
+            if(hrDailyDigestObject.measure[entry].includes("Page")){
+                let pages = hrDailyDigestObject.measure[entry].split(" ");
+
+                pages = pages.filter(word => !word.includes("Page") && word.length > 0);
+                
+                for(let page = 0; page < pages.length; page++){
+                    if(pages[page].includes("-")){
+                        let [firstPage, lastPage] = pages[page].split("-");
+                        firstPageString = firstPage.replace(/\D/, "");
+                        firstPageInt = parseInt(firstPageString);
+                        firstPageTwoDigits = parseInt(firstPageString.slice(firstPageString.length - 2, firstPageString.length));
+                        lastPageTwoDigits = parseInt(lastPage);
+                        let pageDifference = Math.abs(lastPageTwoDigits - firstPageTwoDigits);
+                        
+                        lastPageInt = firstPageInt + pageDifference;
+
+                        lastPageStringH = "H" + lastPageInt;
+                        firstPageStringH = "H" + firstPageString;
+                        pages[page] = [firstPageStringH, lastPageStringH];
+                    }else{
+                        pages[page] = [pages[page].replace(/\W/, '')];
+                    }
+                }
+
+                measureObject["pages"] = pages;
+                listOfMeasureObjects.push(measureObject);
+                measureObject = {};
+            }else{
+                let rollCall = hrDailyDigestObject.passedMeasures[entry].split("Roll ")[1];
+                
+                //Remove non-numeric values to retrieve the roll call vote's number
+                rollCall = rollCall.replace( /^\D+/, '');
+                rollCall = rollCall.replace( /\D+$/, '');
+                rollCall = "No. " + rollCall;
+                
+                measureObject["rollCall"] = rollCall;
+                measureObject["billDescription"] = hrDailyDigestObject.passedMeasures[entry];
+            }
+        }
+    }
+    hrDailyDigestObject.passedMeasures = listOfMeasureObjects;
+    return hrDailyDigestObject;
+}
+
 parseString(xmlCR, {
         trim: true, 
         attrkey: 'attr',
@@ -166,7 +216,6 @@ parseString(xmlCR, {
         
         let hrDailyDigestItems = body.split('  ');
         let paragraphs = hrDailyDigestItems.filter(item => item.length > 0);
-        
 
         //Some elements of the paragraphs at this point may have pages that are connected
             //to the beginning of new messages separated only by a newline character
@@ -176,18 +225,21 @@ parseString(xmlCR, {
                 paragraphs[i] = paragraphs[i].split("\n");
                 //Join the remaining entries such they are full paragraphs in a single string
                 let remainder = paragraphs[i].slice(1, paragraphs[i].length - 1);
-                remainder = remainder.filter(item => item.length > 0);
+                //Clean empty items and digest page entries (eg [[D1234]])
+                remainder = remainder.filter(item => item.length > 0 && !/^\[\[/.test(item) && !/\]\]$/.test(item));
                 remainder = remainder.join(" "); 
                 paragraphs[i] = [paragraphs[i][0], remainder];
 
             }else{
                 //Clean regular paragraphs of the newline character
                 paragraphs[i] = paragraphs[i].split("\n");
-                
+                //Clean empty items and digest page entries (eg [[D1234]])
+                paragraphs[i] = paragraphs[i].filter(item => item.length > 0 && !/^\[\[/.test(item) && !/\]\]$/.test(item));
                 paragraphs[i] = paragraphs[i].join(" "); 
             }
         }
 
+        
         let indicator = true;
         let i = 0;
         while(indicator){
@@ -231,9 +283,7 @@ parseString(xmlCR, {
                 if(element.includes(hrDailyDigestEntries[i][1])){
                     currentTag = hrDailyDigestEntries[i][0];
                     if(hrDailyDigestObject[hrDailyDigestEntries[i][0]] == undefined){
-
                         hrDailyDigestObject[hrDailyDigestEntries[i][0]] = [];
-                        console.log("PRINTING", hrDailyDigestObject)
                     }
                     break;
                 }
@@ -243,31 +293,70 @@ parseString(xmlCR, {
             }
         });
         
-        console.log(hrDailyDigestObject)
-
-        //     // if(element.includes(HR_DAILY_DIGEST_TAGS.passedMeasures)){
-        //     //     if(hrDailyDigestObject["passedMeasures"] !== undefined){
-        //     //         hrDailyDigestObject["passedMeasures"] = hrDailyDigestObject["passedMeasures"] + element;
-                    
-        //     //     }else{
-        //     //         hrDailyDigestObject["passedMeasures"] = element;
-                    
-        //     //     }
-        //     // }else if(element.includes(HR_DAILY_DIGEST_TAGS.failedMeasures)){
-        //     //     if(hrDailyDigestObject["failedMeasures"] !== undefined){
-        //     //         hrDailyDigestObject["failedMeasures"] = hrDailyDigestObject["failedMeasures"] + element;
-                    
-        //     //     }else{
-        //     //         hrDailyDigestObject["failedMeasures"] = element;
-                    
-        //     //     }
-        //     // } else {
-                
-        //     // }
-        // })
-
         // console.log(hrDailyDigestObject)
 
+        
+        let listOfMeasureObjects = [];
+        let measureObject = {};
+        for(let entry = 0; entry < hrDailyDigestObject.passedMeasures.length; entry++){
+            if(hrDailyDigestObject.passedMeasures[entry].includes("Suspensions: The House")){ 
+            } else {
+                if(hrDailyDigestObject.passedMeasures[entry].includes("Page")){
+                    let pages = hrDailyDigestObject.passedMeasures[entry].split(" ");
+
+                    pages = pages.filter(word => !word.includes("Page") && word.length > 0);
+                    
+                    for(let page = 0; page < pages.length; page++){
+                        if(pages[page].includes("-")){
+                            let [firstPage, lastPage] = pages[page].split("-");
+                            firstPageString = firstPage.replace(/\D/, "");
+                            firstPageInt = parseInt(firstPageString);
+                            firstPageTwoDigits = parseInt(firstPageString.slice(firstPageString.length - 2, firstPageString.length));
+                            lastPageTwoDigits = parseInt(lastPage);
+                            let pageDifference = Math.abs(lastPageTwoDigits - firstPageTwoDigits);
+                            
+                            lastPageInt = firstPageInt + pageDifference;
+
+                            lastPageStringH = "H" + lastPageInt;
+                            firstPageStringH = "H" + firstPageString;
+                            pages[page] = [firstPageStringH, lastPageStringH];
+                        }else{
+                            pages[page] = [pages[page].replace(/\W/, '')];
+                        }
+                    }
+
+                    measureObject["pages"] = pages;
+                    listOfMeasureObjects.push(measureObject);
+                    measureObject = {};
+                }else{
+                    let rollCall = hrDailyDigestObject.passedMeasures[entry].split("Roll ")[1];
+                    
+                    //Remove non-numeric values to retrieve the roll call vote's number
+                    rollCall = rollCall.replace( /^\D+/, '');
+                    rollCall = rollCall.replace( /\D+$/, '');
+                    rollCall = "No. " + rollCall;
+                    
+                    measureObject["rollCall"] = rollCall;
+                    measureObject["billDescription"] = hrDailyDigestObject.passedMeasures[entry];
+                }
+            }
+        }
+        hrDailyDigestObject.passedMeasures = listOfMeasureObjects;
+
+        // hrDailyDigestObject = parseHouseActionedMeasures(hrDailyDigestObject, hrDailyDigestObject.passedMeasures, listOfMeasureObjects, measureObject);
+        
+        hrDailyDigestObject.passedMeasures.forEach(passedMeasureObj => {
+            console.log("Measure: ", passedMeasureObj.rollCall)
+            console.log("Description: ", passedMeasureObj.billDescription)
+            console.log("Pages ", passedMeasureObj.pages)
+            console.log("-------------------------------------------------------------------")
+        })
+        
+
+
+
+
+       
         /*
         House of Representative Daily Digest Possible Items
             Public Bills and Resolutions Introduced: 
