@@ -11,6 +11,7 @@ const jsdom = require('jsdom');
 const {JSDOM} = jsdom;
 
 
+
 // app.get("https://api.govinfo.gov/packages/CREC-2018-12-21/mods?api_key=UPY9jQU6CVq80XXWXWoDZzQ7JTm29GsvdJzACahT", (req, res) => {
 //     res.send("hello")
 // })
@@ -239,7 +240,7 @@ parseString(xmlCR, {
             }
         }
 
-        
+//------------------------------------------------------------------------------
         let indicator = true;
         let i = 0;
         while(indicator){
@@ -410,6 +411,8 @@ parseString(xmlCR, {
     // console.log(Object.values(result.mods)[15])
     // console.log(util.inspect(Object.values(result.mods)[15][4], false, null))
 })
+
+
 
 // var xml = "<root>Hello xml2js!</root>"
 // parseString(xml, function (err, result) {
