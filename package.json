@@ -2,10 +2,10 @@
   "name": "polaigo_backend",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "./scripts/DailyDigest/DailyDigest.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js"
+    "start": "nodemon ./scripts/DailyDigest/DailyDigest.js"
   },
   "repository": {
     "type": "git",
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "express": "^4.16.4",
+    "jsdom": "^13.1.0",
     "node-fetch": "^2.3.0",
     "xml2js": "^0.4.19"
   }
