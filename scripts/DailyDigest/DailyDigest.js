@@ -1,7 +1,14 @@
 const fs = require('fs');
-const {downloadDailyDigests, cleanHRDailyDigest} = require('../DailyDigest/parseDailyDigest');
+const {
+    downloadDailyDigests, 
+    cleanHRDailyDigest, 
+    flattenArrayOfDoubleArray,
+    createHRDailyDigestObject,
+    getPassedOrFailedMeasuresHR,
+} = require('../DailyDigest/parseDailyDigest');
 const jsdom = require('jsdom');
 const {JSDOM} = jsdom;
+
 
 const dailyDigestHTMLLinks = require("../CREC/CREC");
 
@@ -20,4 +27,17 @@ let hrDailyDigestItems = body.split('  ');
 let hrDailyDigestParagraphs = hrDailyDigestItems.filter(item => item.length > 0);
 
 cleanHRDailyDigest(hrDailyDigestParagraphs);
+flattenArrayOfDoubleArray(hrDailyDigestParagraphs)
+hrDailyDigestParagraphs = hrDailyDigestParagraphs.filter(item => item.length > 0);
+
+let hrDailyDigestObject = createHRDailyDigestObject(hrDailyDigestParagraphs);
+
+let passedMeasureList = getPassedOrFailedMeasuresHR(hrDailyDigestObject, true);
+let failedMeasureList = getPassedOrFailedMeasuresHR(hrDailyDigestObject, false);
+
+// console.log(passedMeasureList.length)
+failedMeasureList.forEach((element)=>{
+    console.log(element.pages)
+})
+
 
