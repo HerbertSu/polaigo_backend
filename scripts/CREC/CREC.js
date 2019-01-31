@@ -17,6 +17,10 @@ let dailyDigestHTMLLinks = parseDailyDigestForHTMLLinks(dailyDigestContainers);
 
 module.exports = {
     dailyDigestHTMLLinks : dailyDigestHTMLLinks,
+    dailyDigestIDs : dailyDigestIDs,
+    dailyDigestContainers : dailyDigestContainers,
+    relatedItems : relatedItems, 
+    CRECObj : CRECObj,
 }
 
 

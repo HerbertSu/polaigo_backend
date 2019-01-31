@@ -35,9 +35,10 @@ let hrDailyDigestObject = createHRDailyDigestObject(hrDailyDigestParagraphs);
 let passedMeasureList = getPassedOrFailedMeasuresHR(hrDailyDigestObject, true);
 let failedMeasureList = getPassedOrFailedMeasuresHR(hrDailyDigestObject, false);
 
-// console.log(passedMeasureList.length)
-failedMeasureList.forEach((element)=>{
-    console.log(element.pages)
-})
+module.exports = {
+    hrDailyDigestObject : hrDailyDigestObject,
+    passedMeasureList : passedMeasureList,
+    failedMeasureList : failedMeasureList,
+}
 
 
