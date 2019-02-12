@@ -1,0 +1,40 @@
+//Create database
+CREATE DATABASE polaigo_test;
+
+//Create bills_and_resolutions table
+CREATE TABLE IF NOT EXISTS bills_and_resolutions(
+    type VARCHAR(7),
+    number SMALLINT,
+    title TEXT NOT NULL,
+    status TEXT,
+    mostRecentVote DATE,
+    mostRecentCREC TEXT,
+    chamber VARCHAR(6) NOT NULL,
+    PRIMARY KEY( type, number )
+);
+
+//Create congressional_legislators_active table
+CREATE TABLE IF NOT EXISTS congressional_legislators_active(
+    bioGuideId VARCHAR(7) PRIMARY KEY,
+    chamber VARCHAR(6) NOT NULL,
+    initialTerm SMALLINT,
+    previousLegislativePositions JSON,
+    state CHAR(2) NOT NULL,
+    party CHAR NOT NULL,
+    firstName VARCHAR NOT NULL,
+    lastName VARCHAR NOT NULL,
+    middleName VARCHAR,
+    district SMALLINT
+);
+
+//Create votes table
+CREATE TABLE IF NOT EXISTS votes(
+    type VARCHAR(7) NOT NULL,
+    number SMALLINT NOT NULL,
+    bioGuideId VARCHAR(15),
+    voteDate DATE,
+    CRECOfVote TEXT,
+    congressTerm SMALLINT NOT NULL,
+    rollCall SMALLINT NOT NULL,
+    PRIMARY KEY( type, number )
+);

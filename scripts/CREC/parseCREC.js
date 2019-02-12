@@ -83,9 +83,58 @@ let parseDailyDigestForHTMLLinks = (dailyDigestContainers) => {
 }
 
 
+let parseCRECForCongVotes = (relatedItems) => {
+    let hrVotedMeasuresObj = {};
+    let senateVotedMeasuresObj = {};
+
+    for(let item = 0; item < relatedItems.length; item++){
+        if(relatedItems[item].extension !== undefined){
+            if(Object.keys(relatedItems[item].extension[0]).includes("congVote")){
+                if(relatedItems[item].extension[0].granuleClass[0] == "SENATE"){
+                    if(senateVotedMeasuresObj.votedMeasures == undefined){
+                        senateVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
+                    } else {
+                        senateVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
+                    }
+                } else if(relatedItems[item].extension[0].granuleClass[0] == "HOUSE" ) {
+                    let congVote = relatedItems[item].extension[0].congVote[0];
+                    if(congVote.isBillPassageQuestion !== undefined){
+                        if(congVote.isBillPassageQuestion[0] == "true"){
+                            if(hrVotedMeasuresObj.passedBills == undefined){
+                                hrVotedMeasuresObj["passedBills"] = [relatedItems[item].extension[0]]
+                            } else {
+                                hrVotedMeasuresObj.passedBills.push(relatedItems[item].extension[0]);
+                            }
+                        } 
+                    } else if (congVote.result[0].includes("rejected")){
+                        if(hrVotedMeasuresObj.failedBills == undefined){
+                            hrVotedMeasuresObj["failedBills"] = [relatedItems[item].extension[0]]
+                        } else {
+                            hrVotedMeasuresObj.failedBills.push(relatedItems[item].extension[0]);
+                        }
+                    } else {
+                        if(hrVotedMeasuresObj.votedMeasures == undefined){
+                            hrVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
+                        } else {
+                            hrVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
+                        }
+                    }
+                }
+                //if congVote.result tag includes rejected, then put in failedMeasures, else put into resolutionsList
+            }
+        } else {}
+    }
+
+    return {
+        senateVotedMeasuresObj : senateVotedMeasuresObj,
+        hrVotedMeasuresObj : hrVotedMeasuresObj,
+    };
+}
+
 module.exports = {
     convertCRECXMLToObject : convertCRECXMLToObject,
     retrieveCRECSubSections : retrieveCRECSubSections,
     parseCRECForDailyDigest : parseCRECForDailyDigest,
     parseDailyDigestForHTMLLinks : parseDailyDigestForHTMLLinks,
+    parseCRECForCongVotes : parseCRECForCongVotes,
 }
