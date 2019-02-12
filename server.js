@@ -23,6 +23,5 @@ let relatedItems = CREC.relatedItems;
 
 let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
 
-console.log(votedMeasuresExtensionElements.hrVotedMeasuresObj.passedBills[0].congVote[0].attr)
+console.log(votedMeasuresExtensionElements.hrVotedMeasuresObj.passedBills[0])
 
-app.listen(3000);
