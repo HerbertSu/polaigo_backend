@@ -38,3 +38,70 @@ CREATE TABLE IF NOT EXISTS votes(
     rollCall SMALLINT NOT NULL,
     PRIMARY KEY( type, number )
 );
+
+//Create state_codes table
+CREATE TABLE IF NOT EXISTS state_codes(
+    twoLetterCode char(2) PRIMARY KEY,
+    stateName TEXT NOT NULL
+);
+
+//Insert into state_codes table
+INSERT INTO state_codes (twoLetterCode, stateName) VALUES 
+('AL', 'Alabama'),
+('AK', 'Alaska'),
+('AZ', 'Arizona'),
+('AR', 'Arkansas'),
+('CA', 'California'),
+('CO', 'Colorado'),
+('CT', 'Connecticut'),
+('DE', 'Delaware'),
+('FL', 'Florida'),
+('GA', 'Georgia'),
+('HI', 'Hawaii'),
+('ID', 'Idaho'),
+('IL', 'Illinois'),
+('IN', 'Indiana'),
+('IA', 'Iowa'),
+('KS', 'Kansas'),
+('KY', 'Kentucky'),
+('LA', 'Louisiana'),
+('ME', 'Maine'),
+('MD', 'Maryland'),
+('MA', 'Massachusetts'),
+('MI', 'Michigan'),
+('MN', 'Minnesota'),
+('MS', 'Mississippi'),
+('MO', 'Missouri'),
+('MT', 'Montana'),
+('NE', 'Nebraska'),
+('NV', 'Nevada'),
+('NH', 'New Hampshire'),
+('NJ', 'New Jersey'),
+('NM', 'New Mexico'),
+('NY', 'New York'),
+('NC', 'North Carolina'),
+('ND', 'North Dakota'),
+('OH', 'Ohio'),
+('OK', 'Oklahoma'),
+('OR', 'Oregon'),
+('PA', 'Pennsylvania'),
+('RI', 'Rhode Island'),
+('SC', 'South Carolina'),
+('SD', 'South Dakota'),
+('TN', 'Tennessee'),
+('TX', 'Texas'),
+('UT', 'Utah'),
+('VT', 'Vermont'),
+('VA', 'Virginia'),
+('WA', 'Washington'),
+('WV', 'West Virginia'),
+('WI', 'Wisconsin'),
+('WY', 'Wyoming');
+
+
+//Adding a foreign key on "state" column in congressional_legislators_active table
+    //as referring to state_codes.twoLetterCode
+ALTER TABLE congressional_legislators_active 
+ADD CONSTRAINT fk_links_state_to_state_codes
+FOREIGN KEY (state)
+REFERENCES state_codes(twoLetterCode);

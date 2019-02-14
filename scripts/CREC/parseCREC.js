@@ -1,5 +1,22 @@
 const fs = require('fs');
+const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
+
+//date format should be a string in yyyy-mm-dd
+    //e.g. "2018-12-21"
+let fetchCRECXMLFromDate = (date) =>{
+    if(!fs.existsSync(`./test/CREC-${date}.txt`)){
+        fetch(`https://api.govinfo.gov/packages/CREC-${date}/mods?api_key=DEMO_KEY`)
+            .then(res => res.text())
+            .then(fullCR => {
+                fs.writeFile(`./test/CREC-${date}.txt`, fullCR, err=>{
+                    if(err){
+                        console.log(err)
+                    }
+                })
+            })
+    }
+}
 
 //TODO Replace xmlFilePath with the XML string fetched from the govinfo API 
     //for production version.
@@ -90,6 +107,9 @@ let parseCRECForCongVotes = (relatedItems) => {
     for(let item = 0; item < relatedItems.length; item++){
         if(relatedItems[item].extension !== undefined){
             if(Object.keys(relatedItems[item].extension[0]).includes("congVote")){
+                if(relatedItems[item].extension[0].searchTitle[0].includes("CONSOLIDATED APPROPRIATIONS ACT, 2019; Congressional Record Vol. 165, No. 1")){
+                    console.log(relatedItems[item].extension[0])
+                }
                 if(relatedItems[item].extension[0].granuleClass[0] == "SENATE"){
                     if(senateVotedMeasuresObj.votedMeasures == undefined){
                         senateVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
@@ -97,7 +117,7 @@ let parseCRECForCongVotes = (relatedItems) => {
                         senateVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
                     }
                 } else if(relatedItems[item].extension[0].granuleClass[0] == "HOUSE" ) {
-                    let congVote = relatedItems[item].extension[0].congVote[0];
+                    let congVote = relatedItems[item].extension[0].congVote[relatedItems[item].extension[0].congVote.length - 1];
                     if(congVote.isBillPassageQuestion !== undefined){
                         if(congVote.isBillPassageQuestion[0] == "true"){
                             if(hrVotedMeasuresObj.passedBills == undefined){
@@ -137,4 +157,5 @@ module.exports = {
     parseCRECForDailyDigest : parseCRECForDailyDigest,
     parseDailyDigestForHTMLLinks : parseDailyDigestForHTMLLinks,
     parseCRECForCongVotes : parseCRECForCongVotes,
+    fetchCRECXMLFromDate : fetchCRECXMLFromDate,
 }
