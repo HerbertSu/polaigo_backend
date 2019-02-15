@@ -100,49 +100,109 @@ let parseDailyDigestForHTMLLinks = (dailyDigestContainers) => {
 }
 
 
-let parseCRECForCongVotes = (relatedItems) => {
-    let hrVotedMeasuresObj = {};
-    let senateVotedMeasuresObj = {};
-
+let parseCRECForRelatedItemsWithCongVotes = (relatedItems) => {
+    let relatedItemsWithCongVotesList = [];
     for(let item = 0; item < relatedItems.length; item++){
         if(relatedItems[item].extension !== undefined){
             if(Object.keys(relatedItems[item].extension[0]).includes("congVote")){
-                if(relatedItems[item].extension[0].searchTitle[0].includes("CONSOLIDATED APPROPRIATIONS ACT, 2019; Congressional Record Vol. 165, No. 1")){
-                    console.log(relatedItems[item].extension[0])
-                }
-                if(relatedItems[item].extension[0].granuleClass[0] == "SENATE"){
-                    if(senateVotedMeasuresObj.votedMeasures == undefined){
-                        senateVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
-                    } else {
-                        senateVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
-                    }
-                } else if(relatedItems[item].extension[0].granuleClass[0] == "HOUSE" ) {
-                    let congVote = relatedItems[item].extension[0].congVote[relatedItems[item].extension[0].congVote.length - 1];
-                    if(congVote.isBillPassageQuestion !== undefined){
-                        if(congVote.isBillPassageQuestion[0] == "true"){
-                            if(hrVotedMeasuresObj.passedBills == undefined){
-                                hrVotedMeasuresObj["passedBills"] = [relatedItems[item].extension[0]]
-                            } else {
-                                hrVotedMeasuresObj.passedBills.push(relatedItems[item].extension[0]);
-                            }
-                        } 
-                    } else if (congVote.result[0].includes("rejected")){
-                        if(hrVotedMeasuresObj.failedBills == undefined){
-                            hrVotedMeasuresObj["failedBills"] = [relatedItems[item].extension[0]]
-                        } else {
-                            hrVotedMeasuresObj.failedBills.push(relatedItems[item].extension[0]);
-                        }
-                    } else {
-                        if(hrVotedMeasuresObj.votedMeasures == undefined){
-                            hrVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
-                        } else {
-                            hrVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
-                        }
-                    }
-                }
-                //if congVote.result tag includes rejected, then put in failedMeasures, else put into resolutionsList
+                relatedItemsWithCongVotesList.push(relatedItems[item]);
             }
-        } else {}
+        }
+    }
+    return relatedItemsWithCongVotesList;
+}
+
+let getObjectArrayLength = (objectName, arrayName) => {
+    return objectName[arrayName].length;
+}
+
+
+//MIGHT NOT BE NECESSARY. Just edit parseCRECForCongVotes and remove passed/failedBills section for HOUSE
+let populateVotedMeasuresObj = (relatedItem, item) => {
+    let rollCallList = [];
+    for(let i = 0; i < relatedItems[item].identifier.length; i++){
+        if(relatedItems[item].identifier[i].attr.type == "congressional vote number"){
+            rollCallList.push(relatedItems[item].identifier[i]["_"]);
+        }
+    }
+    
+    if(relatedItems[item].extension[0].granuleClass[0] == "SENATE"){
+        if(senateVotedMeasuresObj.votedMeasures == undefined){
+            senateVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
+        } else {
+            senateVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
+        }
+        //Add list of associated roll calls to the object
+        senateVotedMeasuresObj.votedMeasures[getObjectArrayLength(senateVotedMeasuresObj, "votedMeasures") - 1]["rollCalls"] = rollCallList;
+    } else if(relatedItems[item].extension[0].granuleClass[0] == "HOUSE" ) {
+        if(senateVotedMeasuresObj.votedMeasures == undefined){
+            senateVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
+        } else {
+            senateVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
+        }
+        //Add list of associated roll calls to the object
+        senateVotedMeasuresObj.votedMeasures[getObjectArrayLength(senateVotedMeasuresObj, "votedMeasures") - 1]["rollCalls"] = rollCallList;
+    } else {
+        throw "relatedItems[item].extension[0].granuleClass[0] was neither SENATE nor HOUSE";
+    }
+}
+
+let parseCRECForCongVotes = (relatedItemsRaw) => {
+    let hrVotedMeasuresObj = {};
+    let senateVotedMeasuresObj = {};
+
+    let relatedItems = parseCRECForRelatedItemsWithCongVotes(relatedItemsRaw);
+    
+    for(let item = 0; item < relatedItems.length; item++){
+        // if(relatedItems[item].extension[0].searchTitle[0].includes("MOTION TO REFER; Congressional Record Vol. 165, No. 1")){
+        //     console.log(relatedItems[item].extension[0])
+        // }
+        let rollCallList = [];
+        for(let i = 0; i < relatedItems[item].identifier.length; i++){
+            if(relatedItems[item].identifier[i].attr.type == "congressional vote number"){
+                rollCallList.push(relatedItems[item].identifier[i]["_"]);
+            }
+        }
+        
+        if(relatedItems[item].extension[0].granuleClass[0] == "SENATE"){
+            if(senateVotedMeasuresObj.votedMeasures == undefined){
+                senateVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
+            } else {
+                senateVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
+            }
+            //Add list of associated roll calls to the object
+            senateVotedMeasuresObj.votedMeasures[getObjectArrayLength(senateVotedMeasuresObj, "votedMeasures") - 1]["rollCalls"] = rollCallList;
+
+        } else if(relatedItems[item].extension[0].granuleClass[0] == "HOUSE" ) {
+            let congVote = relatedItems[item].extension[0].congVote[relatedItems[item].extension[0].congVote.length - 1];
+            if(congVote.isBillPassageQuestion !== undefined){
+                if(congVote.isBillPassageQuestion[0] == "true"){
+                    if(hrVotedMeasuresObj.passedBills == undefined){
+                        hrVotedMeasuresObj["passedBills"] = [relatedItems[item].extension[0]]
+                    } else {
+                        hrVotedMeasuresObj.passedBills.push(relatedItems[item].extension[0]);
+                    }
+                }
+                //Add list of associated roll calls to the object
+                hrVotedMeasuresObj.passedBills[getObjectArrayLength(hrVotedMeasuresObj, "passedBills") - 1]["rollCalls"] = rollCallList;
+            } else if (congVote.result[0].includes("rejected")){
+                if(hrVotedMeasuresObj.failedBills == undefined){
+                    hrVotedMeasuresObj["failedBills"] = [relatedItems[item].extension[0]]
+                } else {
+                    hrVotedMeasuresObj.failedBills.push(relatedItems[item].extension[0]);
+                }
+                //Add list of associated roll calls to the object
+                hrVotedMeasuresObj.failedBills[getObjectArrayLength(hrVotedMeasuresObj, "failedBills") - 1]["rollCalls"] = rollCallList;
+            } else {
+                if(hrVotedMeasuresObj.votedMeasures == undefined){
+                    hrVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
+                } else {
+                    hrVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
+                }
+                //Add list of associated roll calls to the object
+                hrVotedMeasuresObj.votedMeasures[getObjectArrayLength(hrVotedMeasuresObj, "votedMeasures") - 1]["rollCalls"] = rollCallList;
+            }
+        }
     }
 
     return {
@@ -158,4 +218,5 @@ module.exports = {
     parseDailyDigestForHTMLLinks : parseDailyDigestForHTMLLinks,
     parseCRECForCongVotes : parseCRECForCongVotes,
     fetchCRECXMLFromDate : fetchCRECXMLFromDate,
+    parseCRECForRelatedItemsWithCongVotes : parseCRECForRelatedItemsWithCongVotes,
 }
