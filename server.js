@@ -24,12 +24,7 @@ const {parseCRECForCongVotes, parseCRECForRelatedItemsWithCongVotes} = require('
 //     })
 
 
-//TODO congVotes can have more than one entry in its array because relatedItems can include
-    //multiple votes if certain resolutions/bills are linked together.
-    //Need to generalize parseCRECForCongVotes() function to throw everything from HOUSE 
-    //into a votedMeasures object like for SENATE.
-    //After we have everything then we can match the rollCalls with their congVote counterparts.
-
+//TODO find a way to link roll call votes to the bills/resolutions that they're associated with
 //TODO: Find the indices of relatedItems that pertain to the pages returned in passedMeasureList and
     //failedMeasureList
     /*
@@ -51,6 +46,10 @@ let relatedItems = CREC.relatedItems;
 let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
 
 // console.log(votedMeasuresExtensionElements.hrVotedMeasuresObj.failedBills.length)
-console.log(votedMeasuresExtensionElements.hrVotedMeasuresObj.passedBills[0])
+
+votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach(measure => {
+    console.log(measure.congVote.length, "\n",measure.rollCalls);
+})
+// console.log(votedMeasuresExtensionElements.senateVotedMeasuresObj)
 // console.log(votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.length)
 

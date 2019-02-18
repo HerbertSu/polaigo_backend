@@ -112,40 +112,30 @@ let parseCRECForRelatedItemsWithCongVotes = (relatedItems) => {
     return relatedItemsWithCongVotesList;
 }
 
-let getObjectArrayLength = (objectName, arrayName) => {
-    return objectName[arrayName].length;
+let getObjectArrayIndex = (objectName, arrayName) => {
+    return objectName[arrayName].length - 1;
 }
 
 
-//MIGHT NOT BE NECESSARY. Just edit parseCRECForCongVotes and remove passed/failedBills section for HOUSE
-let populateVotedMeasuresObj = (relatedItem, item) => {
-    let rollCallList = [];
-    for(let i = 0; i < relatedItems[item].identifier.length; i++){
-        if(relatedItems[item].identifier[i].attr.type == "congressional vote number"){
-            rollCallList.push(relatedItems[item].identifier[i]["_"]);
-        }
-    }
+let populateVotedMeasuresObjCurried = (relatedItemsEntry) => (votedMeasuresObj) =>{
     
-    if(relatedItems[item].extension[0].granuleClass[0] == "SENATE"){
-        if(senateVotedMeasuresObj.votedMeasures == undefined){
-            senateVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
-        } else {
-            senateVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
+    let rollCallList = [];
+    for(let i = 0; i < relatedItemsEntry.identifier.length; i++){
+        if(relatedItemsEntry.identifier[i].attr.type == "congressional vote number"){
+            rollCallList.push(relatedItemsEntry.identifier[i]["_"]);
         }
-        //Add list of associated roll calls to the object
-        senateVotedMeasuresObj.votedMeasures[getObjectArrayLength(senateVotedMeasuresObj, "votedMeasures") - 1]["rollCalls"] = rollCallList;
-    } else if(relatedItems[item].extension[0].granuleClass[0] == "HOUSE" ) {
-        if(senateVotedMeasuresObj.votedMeasures == undefined){
-            senateVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
-        } else {
-            senateVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
-        }
-        //Add list of associated roll calls to the object
-        senateVotedMeasuresObj.votedMeasures[getObjectArrayLength(senateVotedMeasuresObj, "votedMeasures") - 1]["rollCalls"] = rollCallList;
-    } else {
-        throw "relatedItems[item].extension[0].granuleClass[0] was neither SENATE nor HOUSE";
     }
+
+    if(votedMeasuresObj.votedMeasures == undefined){
+        votedMeasuresObj["votedMeasures"] = [relatedItemsEntry.extension[0]];
+    } else {
+        votedMeasuresObj.votedMeasures.push(relatedItemsEntry.extension[0]);
+    }
+
+    //Add list of associated roll calls to the object
+    votedMeasuresObj.votedMeasures[getObjectArrayIndex(votedMeasuresObj, "votedMeasures")]["rollCalls"] = rollCallList;
 }
+
 
 let parseCRECForCongVotes = (relatedItemsRaw) => {
     let hrVotedMeasuresObj = {};
@@ -153,6 +143,16 @@ let parseCRECForCongVotes = (relatedItemsRaw) => {
 
     let relatedItems = parseCRECForRelatedItemsWithCongVotes(relatedItemsRaw);
     
+    for(let item = 0; item < relatedItems.length; item++){
+        if(relatedItems[item].extension[0].granuleClass[0] == "SENATE"){
+            populateVotedMeasuresObjCurried(relatedItems[item])(senateVotedMeasuresObj);
+        }else if(relatedItems[item].extension[0].granuleClass[0] == "HOUSE"){
+            populateVotedMeasuresObjCurried(relatedItems[item])(hrVotedMeasuresObj);
+        }
+    }
+    
+
+    /* Keep until you've taken out the code for retriving passedBills and failedBills from HOUSE
     for(let item = 0; item < relatedItems.length; item++){
         // if(relatedItems[item].extension[0].searchTitle[0].includes("MOTION TO REFER; Congressional Record Vol. 165, No. 1")){
         //     console.log(relatedItems[item].extension[0])
@@ -204,6 +204,7 @@ let parseCRECForCongVotes = (relatedItemsRaw) => {
             }
         }
     }
+    */
 
     return {
         senateVotedMeasuresObj : senateVotedMeasuresObj,
