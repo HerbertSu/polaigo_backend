@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS bills_and_resolutions(
     PRIMARY KEY( type, number )
 );
 
-//Create congressional_legislators_active table
+//DEPRECATED Create congressional_legislators_active table
+    //Replaced with representatives_of_hr_active and senators_of_senate_active tables
 CREATE TABLE IF NOT EXISTS congressional_legislators_active(
     bioGuideId VARCHAR(7) PRIMARY KEY,
     chamber VARCHAR(6) NOT NULL,
@@ -25,6 +26,33 @@ CREATE TABLE IF NOT EXISTS congressional_legislators_active(
     lastName VARCHAR NOT NULL,
     middleName VARCHAR,
     district SMALLINT
+);
+
+// Create representatives_of_hr_active table
+CREATE TABLE IF NOT EXISTS representatives_of_hr_active(
+    bioGuideId VARCHAR(7) PRIMARY KEY,
+    priorCongress SMALLINT,
+    previousLegislativePositions JSON,
+    state CHAR(2) NOT NULL,
+    party CHAR NOT NULL,
+    firstName VARCHAR NOT NULL,
+    lastName VARCHAR NOT NULL,
+    middleName VARCHAR,
+    district SMALLINT NOT NULL,
+    dateOfLastUpdate DATE NOT NULL
+);
+
+// Create senators_of_senate_active table
+CREATE TABLE IF NOT EXISTS senators_of_senate_active(
+    bioGuideId VARCHAR(7) PRIMARY KEY,
+    priorCongress SMALLINT,
+    previousLegislativePositions JSON,
+    state CHAR(2) NOT NULL,
+    party CHAR NOT NULL,
+    firstName VARCHAR NOT NULL,
+    lastName VARCHAR NOT NULL,
+    middleName VARCHAR,
+    dateOfLastUpdate DATE 
 );
 
 //Create votes table
@@ -39,9 +67,21 @@ CREATE TABLE IF NOT EXISTS votes(
     PRIMARY KEY( type, number )
 );
 
+//Create party_codes table
+CREATE TABLE IF NOT EXISTS party_codes(
+    partyCode CHAR PRIMARY KEY,
+    partyFullName VARCHAR UNIQUE
+);
+
+//Insert into party_codes table
+INSERT INTO party_codes (partyCode, partyFullName) VALUES
+('D', 'Democratic'),
+('R', 'Republican'),
+('I', 'Independent');
+
 //Create state_codes table
 CREATE TABLE IF NOT EXISTS state_codes(
-    twoLetterCode char(2) PRIMARY KEY,
+    twoLetterCode CHAR(2) PRIMARY KEY,
     stateName TEXT NOT NULL
 );
 
@@ -99,9 +139,19 @@ INSERT INTO state_codes (twoLetterCode, stateName) VALUES
 ('WY', 'Wyoming');
 
 
-//Adding a foreign key on "state" column in congressional_legislators_active table
+//Adding a foreign key on "state" column in representatives_of_hr_active table
     //as referring to state_codes.twoLetterCode
-ALTER TABLE congressional_legislators_active 
+ALTER TABLE representatives_of_hr_active
 ADD CONSTRAINT fk_links_state_to_state_codes
 FOREIGN KEY (state)
 REFERENCES state_codes(twoLetterCode);
+
+//Adding a foreign key on "party" column in representatives_of_hr_active table
+    //as referring to party_codes.partyCode
+ALTER TABLE representatives_of_hr_active
+ADD CONSTRAINT fk_links_party_to_party_codes
+FOREIGN KEY (party)
+REFERENCES party_codes(partyCode);
+
+//Delete the deprecated congressional_legislators_active table
+DROP TABLE IF EXISTS congressional_legislators_active;

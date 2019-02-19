@@ -27,9 +27,40 @@ let convertRollCallXMLToObject = (xmlFilepath) => {
         attrkey: 'attr',
     }, 
     function (err, result){
-        console.log(result)
+        rollCallObj = result["rollcall-vote"];
     })
-
+    return rollCallObj;
 }
 
+
+/*
+items of interest:
+    vote-metadata
+        congress
+        session
+        chamber     ?
+        rollcall-num
+        legis-num           (bill/resolution number)
+        vote-question
+        vote-result
+        action-date
+        action-time.attr.etz
+        vote-desc   ?
+    vote-data
+        recorded-vote
+            legislator.attr.name-id
+            legislator.attr.state
+            legislator value (last name of rep)
+            vote value (Yea or Nay)
+
+
+*/
+    
 let rollCallObj = convertRollCallXMLToObject("./test/ROLL-2019-003.txt");
+console.log(rollCallObj["vote-metadata"][0]["action-time"])
+
+
+module.exports = {
+    fetchAndWriteRollCall : fetchAndWriteRollCall,
+    convertRollCallXMLToObject : convertRollCallXMLToObject,
+}
