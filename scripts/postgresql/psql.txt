@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS representatives_of_hr_active(
     firstName VARCHAR NOT NULL,
     lastName VARCHAR NOT NULL,
     middleName VARCHAR,
-    district SMALLINT NOT NULL,
+    district VARCHAR(4) NOT NULL,
     dateOfLastUpdate DATE NOT NULL
 );
 
@@ -136,7 +136,13 @@ INSERT INTO state_codes (twoLetterCode, stateName) VALUES
 ('WA', 'Washington'),
 ('WV', 'West Virginia'),
 ('WI', 'Wisconsin'),
-('WY', 'Wyoming');
+('WY', 'Wyoming'),
+('AS', 'American Samoa'),
+('DC', 'District of Columbia'),
+('MP', 'Northern Mariana Islands'),
+('PR', 'Puerto Rico'),
+('VI', 'Virgin Islands'),
+('GU', 'Guam');
 
 
 //Adding a foreign key on "state" column in representatives_of_hr_active table
@@ -153,5 +159,16 @@ ADD CONSTRAINT fk_links_party_to_party_codes
 FOREIGN KEY (party)
 REFERENCES party_codes(partyCode);
 
+//Change a table's column type
+ALTER TABLE representatives_of_hr_active
+ALTER COLUMN district TYPE VARCHAR(4);
+
 //Delete the deprecated congressional_legislators_active table
 DROP TABLE IF EXISTS congressional_legislators_active;
+
+//Grant connect privileges to user
+GRANT CONNECT ON DATABASE polaigo_test TO postgres;
+
+//Grant all privileges to a database for a user
+GRANT ALL PRIVILEGES ON DATABASE polaigo_test TO postgres;
+

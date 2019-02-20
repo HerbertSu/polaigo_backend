@@ -1,7 +1,7 @@
 const fs = require('fs');
 const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
-
+const {ACCESS_ARRAY} = require('../../constants/constants');
 
 //TODO Should I insert/update the representatives_of_hr_active psql table
     //inside the for-loop of parseHRMemberDataObj, or save all of the parsed
@@ -53,14 +53,9 @@ let convertHRMemberXMLToObj = (xmlFilePath) => {
 }
 
 
-let representativesObj = convertHRMemberXMLToObj('./test/HR-Representatives-Data-February-11-2019.txt');
-const ACCESS_ARRAY = 0;
-
-
-
-
     
 let parseHRMemberDataObj = (representativesObj) => {
+    let HRMemberList = [];
     
     let representativesList = representativesObj.members[ACCESS_ARRAY].member;
     let dateOfMemberData = representativesObj.attr["publish-date"];
@@ -70,23 +65,62 @@ let parseHRMemberDataObj = (representativesObj) => {
         let district = representativesList[index].statedistrict[ACCESS_ARRAY];
         let memberInfo = representativesList[index]["member-info"][ACCESS_ARRAY];
 
-        let bioGuideId = "";
+        let bioguideid = "";
         if(memberInfo.footnote != undefined){
-            bioGuideId = `VAC${district}`;
+            bioguideid = `VAC${district}`;
         } else {
-            bioGuideId = memberInfo.bioguideID[ACCESS_ARRAY];
+            bioguideid = memberInfo.bioguideID[ACCESS_ARRAY];
         }
 
-        let firstName = memberInfo.firstname[ACCESS_ARRAY];
-        let lastName = memberInfo.lastname[ACCESS_ARRAY];
-        let middleName = memberInfo.middlename[ACCESS_ARRAY];
-        let priorCongress = memberInfo["prior-congress"][ACCESS_ARRAY];
+        let firstname = memberInfo.firstname[ACCESS_ARRAY];
+        let lastname = memberInfo.lastname[ACCESS_ARRAY];
+        let middlename = memberInfo.middlename[ACCESS_ARRAY];
+        let priorcongress = memberInfo["prior-congress"][ACCESS_ARRAY];
         let state = memberInfo.state[ACCESS_ARRAY].attr["postal-code"];
         let party = memberInfo.party[ACCESS_ARRAY];
-
+        
+        HRMemberList.push({
+            bioguideid,
+            priorcongress,
+            state,
+            party,
+            firstname,
+            lastname,
+            middlename,
+            district,
+            dateoflastupdate : dateOfMemberData,
+        })
     }
+
+    return HRMemberList;
 
 }
 
-parseHRMemberDataObj(representativesObj)
+
+
+
+let updateRepresentativesActiveTable = (HRMemberList, postgres) => {
+    //select from reps_of_hr_active table where bioguideid == bioguideid
+    //if exists, update
+    //else, insert
+    postgres.transaction( trx => {
+        trx.insert(HRMemberList)
+        .into("representatives_of_hr_active")
+        .then(res =>{
+            console.log("inserted")
+        })
+        .catch( (err) => {
+            console.log(err);
+        })
+    })
+
+}   
+
+
+module.exports = {
+    fetchAndWriteRepresentativesData,
+    convertHRMemberXMLToObj,
+    parseHRMemberDataObj,
+    updateRepresentativesActiveTable,
+}
 

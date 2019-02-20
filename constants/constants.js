@@ -14,6 +14,9 @@ const HR_DAILY_DIGEST_TAGS = {
     nextMeeting : "Motion to Fix Next Convening Time"
 };
 
+const ACCESS_ARRAY = 0;
+
 module.exports = {
     HR_DAILY_DIGEST_TAGS : HR_DAILY_DIGEST_TAGS,
+    ACCESS_ARRAY,
 }

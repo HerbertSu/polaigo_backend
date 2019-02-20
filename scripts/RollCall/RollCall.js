@@ -57,8 +57,6 @@ items of interest:
 */
     
 let rollCallObj = convertRollCallXMLToObject("./test/ROLL-2019-003.txt");
-console.log(rollCallObj["vote-metadata"][0]["action-time"])
-
 
 module.exports = {
     fetchAndWriteRollCall : fetchAndWriteRollCall,
