@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS bills_and_resolutions(
     PRIMARY KEY( type, number )
 );
 
-//Create congressional_legislators_active table
+//DEPRECATED Create congressional_legislators_active table
+    //Replaced with representatives_of_hr_active and senators_of_senate_active tables
 CREATE TABLE IF NOT EXISTS congressional_legislators_active(
     bioGuideId VARCHAR(7) PRIMARY KEY,
     chamber VARCHAR(6) NOT NULL,
@@ -27,14 +28,161 @@ CREATE TABLE IF NOT EXISTS congressional_legislators_active(
     district SMALLINT
 );
 
-//Create votes table
-CREATE TABLE IF NOT EXISTS votes(
-    type VARCHAR(7) NOT NULL,
-    number SMALLINT NOT NULL,
-    bioGuideId VARCHAR(15),
-    voteDate DATE,
-    CRECOfVote TEXT,
-    congressTerm SMALLINT NOT NULL,
-    rollCall SMALLINT NOT NULL,
-    PRIMARY KEY( type, number )
+// Create representatives_of_hr_active table
+CREATE TABLE IF NOT EXISTS representatives_of_hr_active(
+    bioGuideId VARCHAR(7) PRIMARY KEY,
+    priorCongress SMALLINT,
+    previousLegislativePositions JSON,
+    state CHAR(2) NOT NULL,
+    party CHAR NOT NULL,
+    firstName VARCHAR NOT NULL,
+    lastName VARCHAR NOT NULL,
+    middleName VARCHAR,
+    district VARCHAR(2) NOT NULL,
+    dateOfLastUpdate DATE NOT NULL
 );
+
+// Create senators_of_senate_active table
+CREATE TABLE IF NOT EXISTS senators_of_senate_active(
+    bioGuideId VARCHAR(7) PRIMARY KEY,
+    priorCongress SMALLINT,
+    previousLegislativePositions JSON,
+    state CHAR(2) NOT NULL,
+    party CHAR NOT NULL,
+    firstName VARCHAR NOT NULL,
+    lastName VARCHAR NOT NULL,
+    middleName VARCHAR,
+    dateOfLastUpdate DATE 
+);
+
+//Create roll_call_votes_hr table
+CREATE TABLE IF NOT EXISTS roll_call_votes_hr(
+    roll CHAR(5),
+    congressTerm CHAR(3),
+    session CHAR,
+    result VARCHAR NOT NULL,
+    CRECOfVote VARCHAR,
+    summary TEXT,
+    date DATE,
+    issue VARCHAR NOT NULL,
+    question VARCHAR,
+    PRIMARY KEY( roll, congressTerm, session )
+);
+
+//Create vote_histories_hr_active table
+CREATE TABLE IF NOT EXISTS vote_histories_hr_active(
+    bioGuideId VARCHAR(7) PRIMARY KEY,
+    votingHistory JSON
+);
+
+//Create vote_histories_hr_inactive table
+CREATE TABLE IF NOT EXISTS vote_histories_hr_inactive(
+    bioGuideId VARCHAR(7) PRIMARY KEY,
+    votingHistory JSON
+);
+
+//Create party_codes table
+CREATE TABLE IF NOT EXISTS party_codes(
+    partyCode CHAR PRIMARY KEY,
+    partyFullName VARCHAR UNIQUE
+);
+
+//Insert into party_codes table
+INSERT INTO party_codes (partyCode, partyFullName) VALUES
+('D', 'Democratic'),
+('R', 'Republican'),
+('I', 'Independent');
+
+//Create state_codes table
+CREATE TABLE IF NOT EXISTS state_codes(
+    twoLetterCode CHAR(2) PRIMARY KEY,
+    stateName TEXT NOT NULL
+);
+
+//Insert into state_codes table
+INSERT INTO state_codes (twoLetterCode, stateName) VALUES 
+('AL', 'Alabama'),
+('AK', 'Alaska'),
+('AZ', 'Arizona'),
+('AR', 'Arkansas'),
+('CA', 'California'),
+('CO', 'Colorado'),
+('CT', 'Connecticut'),
+('DE', 'Delaware'),
+('FL', 'Florida'),
+('GA', 'Georgia'),
+('HI', 'Hawaii'),
+('ID', 'Idaho'),
+('IL', 'Illinois'),
+('IN', 'Indiana'),
+('IA', 'Iowa'),
+('KS', 'Kansas'),
+('KY', 'Kentucky'),
+('LA', 'Louisiana'),
+('ME', 'Maine'),
+('MD', 'Maryland'),
+('MA', 'Massachusetts'),
+('MI', 'Michigan'),
+('MN', 'Minnesota'),
+('MS', 'Mississippi'),
+('MO', 'Missouri'),
+('MT', 'Montana'),
+('NE', 'Nebraska'),
+('NV', 'Nevada'),
+('NH', 'New Hampshire'),
+('NJ', 'New Jersey'),
+('NM', 'New Mexico'),
+('NY', 'New York'),
+('NC', 'North Carolina'),
+('ND', 'North Dakota'),
+('OH', 'Ohio'),
+('OK', 'Oklahoma'),
+('OR', 'Oregon'),
+('PA', 'Pennsylvania'),
+('RI', 'Rhode Island'),
+('SC', 'South Carolina'),
+('SD', 'South Dakota'),
+('TN', 'Tennessee'),
+('TX', 'Texas'),
+('UT', 'Utah'),
+('VT', 'Vermont'),
+('VA', 'Virginia'),
+('WA', 'Washington'),
+('WV', 'West Virginia'),
+('WI', 'Wisconsin'),
+('WY', 'Wyoming'),
+('AS', 'American Samoa'),
+('DC', 'District of Columbia'),
+('MP', 'Northern Mariana Islands'),
+('PR', 'Puerto Rico'),
+('VI', 'Virgin Islands'),
+('GU', 'Guam');
+
+
+//Adding a foreign key on "state" column in representatives_of_hr_active table
+    //as referring to state_codes.twoLetterCode
+ALTER TABLE representatives_of_hr_active
+ADD CONSTRAINT fk_links_state_to_state_codes
+FOREIGN KEY (state)
+REFERENCES state_codes(twoLetterCode);
+
+//Adding a foreign key on "party" column in representatives_of_hr_active table
+    //as referring to party_codes.partyCode
+ALTER TABLE representatives_of_hr_active
+ADD CONSTRAINT fk_links_party_to_party_codes
+FOREIGN KEY (party)
+REFERENCES party_codes(partyCode);
+
+//Change a table's column type
+ALTER TABLE representatives_of_hr_active
+ALTER COLUMN district TYPE VARCHAR(4);
+
+//Delete the deprecated congressional_legislators_active table
+DROP TABLE IF EXISTS congressional_legislators_active;
+
+//Grant connect privileges to user
+GRANT CONNECT ON DATABASE polaigo_test TO postgres;
+
+//Grant all privileges to a database for a user
+GRANT ALL PRIVILEGES ON DATABASE polaigo_test TO postgres;
+

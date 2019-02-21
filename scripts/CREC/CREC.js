@@ -3,9 +3,14 @@ const {
     retrieveCRECSubSections,
     parseCRECForDailyDigest,
     parseDailyDigestForHTMLLinks,
+    fetchCRECXMLFromDate,
     } = require('./parseCREC.js');
 
-let xmlFilePath = "./test/CREC-2018-12-21.txt";
+// let date = "2018-12-21";
+let date = "2019-01-03";
+fetchCRECXMLFromDate("2019-01-03");
+ 
+let xmlFilePath = `./test/CREC-${date}.txt`;
 
 //The base result of parsing CREC is an object of size 1 with key "mods".
 //Object.keys(result.mods)) returns an array of the unique keys of the keys in the object that is the value to "mods"
