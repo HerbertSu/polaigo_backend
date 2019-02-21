@@ -142,43 +142,35 @@ let updateRepresentativesActiveTable = (HRMemberList, postgres) => {
     })
 }   
 
-//TODO Find a way to only insert new bioguideids given a list with
-    //some non-unique bioguideids
+//@param columnListFromSQL is a list of a single column's {column : value} objects returned from a knex SELECT query
+let upsertQueryRaw = (tableName, columnName, columnListFromSQL, conflict="", action="DO NOTHING" ) =>{
+    let valuesList = columnListFromSQL.map((columnObj)=>{
+        return "('" + Object.values(columnObj)[0] + "')";
+    });
+    let valuesString = valuesList.join(",")
+    let upsert = `INSERT INTO ${tableName} (${columnName}) VALUES ${valuesString} ON CONFLICT ${conflict} ${action};`;
+    return upsert;
+}
+
 let updateVoteHistoriesActiveBioGuideIds = (postgres) => {
+    let tableName = "vote_histories_hr_active";
+    let columnName = "bioguideid";
+
+    let bioIdGuideListFromSQL = [];
     
-    postgres.insert([{bioguideid: 'Y000033'}, {bioguideid: 'NEW_ID_'},  {bioguideid: 'B001289'}])
-        .into("vote_histories_hr_active")
-        .whereNotIn(postgres.select)
-        .then(res=>{
-            console.log("added");
+    postgres.from("representatives_of_hr_active").select("bioguideid")
+        .then(res => {
+            bioIdGuideListFromSQL = res;
         })
-        .catch(err =>{
-            if(err.code == "23505"){
-                console.log("pass ", err.detail);
-            }
+    postgres.transaction( trx => {
+        let insertOnConflictQuery =  upsertQueryRaw(tableName, columnName, bioIdGuideListFromSQL);
+        trx.raw(insertOnConflictQuery)
+        .then(trx.commit)
+        .catch(err=>{
+            console.log(err);
+            trx.rollback;
         })
-    // postgres.transaction( trx => {
-    //     trx.select('bioguideid')
-    //         .from('representatives_of_hr_active')
-    //         .then(list_of_bioguideids => {
-    //             return trx.insert(list_of_bioguideids)
-    //                 .into("vote_histories_hr_active")
-    //                 .then( res =>{
-    //                     console.log("vote_histories_hr_active table bioguideids have been updated")
-    //                 })
-    //                 .catch(err => {
-    //                     if(err.code == '23505'){
-    //                         console.log("duplicate found")
-    //                     }
-    //                 })
-    //         })
-    //     .then(trx.commit)
-    //     .catch( (err) =>{
-    //         console.log(err);
-    //         trx.rollback;
-    //     })
-    // })
-    
+    })
 }
 
 module.exports = {
