@@ -8,6 +8,7 @@ const {
     convertHRMemberXMLToObj, 
     parseHRMemberDataObj,
     updateRepresentativesActiveTable,
+    updateVoteHistoriesActiveBioGuideIds,
     } = require('./scripts/HR/HR');
 
 const knex = require('knex');
@@ -65,25 +66,13 @@ votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach(measure 
 //*****
 */
 
-
-//TODO Select from representatives_of_hr_active table, check if there are any differences between
-    //new values and table values. If exactly the same, remove from HRMemberList.
-    //Only update the ones that are different. Search by district.
+/*****
 //For populating representatives_of_hr_active table
 let representativesObj = convertHRMemberXMLToObj('./test/HR-Representatives-Data-February-11-2019.txt');
 let HRMemberList = parseHRMemberDataObj(representativesObj);
 updateRepresentativesActiveTable(HRMemberList, postgres);
+*****/
 
-
-// postgres.insert( { str: "value2"} )
-//     .into('test2')
-//     .returning('str')
-//     .then(str => console.log(str));
-
-// postgres.select('str').from('test2')
-//     .then(data => {
-//         console.log(data)
-//     })
-
+updateVoteHistoriesActiveBioGuideIds(postgres);
 
 

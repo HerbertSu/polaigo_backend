@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS representatives_of_hr_active(
     firstName VARCHAR NOT NULL,
     lastName VARCHAR NOT NULL,
     middleName VARCHAR,
-    district VARCHAR(4) NOT NULL,
+    district VARCHAR(2) NOT NULL,
     dateOfLastUpdate DATE NOT NULL
 );
 
@@ -55,16 +55,30 @@ CREATE TABLE IF NOT EXISTS senators_of_senate_active(
     dateOfLastUpdate DATE 
 );
 
-//Create votes table
-CREATE TABLE IF NOT EXISTS votes(
-    type VARCHAR(7) NOT NULL,
-    number SMALLINT NOT NULL,
-    bioGuideId VARCHAR(15),
-    voteDate DATE,
-    CRECOfVote TEXT,
-    congressTerm SMALLINT NOT NULL,
-    rollCall SMALLINT NOT NULL,
-    PRIMARY KEY( type, number )
+//Create roll_call_votes_hr table
+CREATE TABLE IF NOT EXISTS roll_call_votes_hr(
+    roll CHAR(5),
+    congressTerm CHAR(3),
+    session CHAR,
+    result VARCHAR NOT NULL,
+    CRECOfVote VARCHAR,
+    summary TEXT,
+    date DATE,
+    issue VARCHAR NOT NULL,
+    question VARCHAR,
+    PRIMARY KEY( roll, congressTerm, session )
+);
+
+//Create vote_histories_hr_active table
+CREATE TABLE IF NOT EXISTS vote_histories_hr_active(
+    bioGuideId VARCHAR(7) PRIMARY KEY,
+    votingHistory JSON
+);
+
+//Create vote_histories_hr_inactive table
+CREATE TABLE IF NOT EXISTS vote_histories_hr_inactive(
+    bioGuideId VARCHAR(7) PRIMARY KEY,
+    votingHistory JSON
 );
 
 //Create party_codes table
