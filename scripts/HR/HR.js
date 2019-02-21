@@ -163,13 +163,20 @@ let updateVoteHistoriesActiveBioGuideIds = (postgres) => {
             bioIdGuideListFromSQL = res;
         })
     postgres.transaction( trx => {
-        let insertOnConflictQuery =  upsertQueryRaw(tableName, columnName, bioIdGuideListFromSQL);
-        trx.raw(insertOnConflictQuery)
-        .then(trx.commit)
-        .catch(err=>{
-            console.log(err);
-            trx.rollback;
-        })
+        trx.select("bioguideid")
+            .from("representatives_of_hr_active")
+            .then(res => {
+                bioIdGuideListFromSQL = res;
+                let insertOnConflictQuery =  upsertQueryRaw(tableName, columnName, bioIdGuideListFromSQL);
+                return trx.raw(insertOnConflictQuery)                
+                })
+            .then(trx.commit)
+            .catch(err=>{
+                console.log(err);
+                trx.rollback;
+            })
+            
+        
     })
 }
 
