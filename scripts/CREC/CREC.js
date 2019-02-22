@@ -8,7 +8,7 @@ const {
 
 // let date = "2018-12-21";
 let date = "2019-01-03";
-fetchCRECXMLFromDate("2019-01-03");
+// fetchCRECXMLFromDate("2019-01-03");
  
 let xmlFilePath = `./test/CREC-${date}.txt`;
 
