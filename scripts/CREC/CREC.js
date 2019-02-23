@@ -4,7 +4,9 @@ const {
     parseCRECForDailyDigest,
     parseDailyDigestForHTMLLinks,
     fetchCRECXMLFromDate,
+    getDataOfCREC,
     } = require('./parseCREC.js');
+
 
 // let date = "2018-12-21";
 let date = "2019-01-03";
@@ -19,6 +21,8 @@ let CRECObj = convertCRECXMLToObject(xmlFilePath);
 let relatedItems = retrieveCRECSubSections(CRECObj);
 let [dailyDigestIDs, dailyDigestContainers] = parseCRECForDailyDigest(relatedItems);
 let dailyDigestHTMLLinks = parseDailyDigestForHTMLLinks(dailyDigestContainers);
+
+
 
 module.exports = {
     dailyDigestHTMLLinks : dailyDigestHTMLLinks,

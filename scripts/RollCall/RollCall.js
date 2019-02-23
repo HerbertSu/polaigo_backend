@@ -98,8 +98,6 @@ let getRollCallDataFromHRClerk = () => {
     console.log(representativesVotesList)
 }
 
-getRollCallDataFromHRClerk()
-
 
 module.exports = {
     fetchAndWriteRollCall : fetchAndWriteRollCall,

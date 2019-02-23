@@ -2,7 +2,11 @@ const express = require('express');
 const app = express();
 const CREC = require("./scripts/CREC/CREC");
 const DailyDigest = require("./scripts/DailyDigest/DailyDigest");
-const {parseCRECForCongVotes, parseCRECForRelatedItemsWithCongVotes} = require('./scripts/CREC/parseCREC');
+const {
+    parseCRECForCongVotes, 
+    parseCRECForRelatedItemsWithCongVotes,
+    getDataOfCREC,
+    } = require('./scripts/CREC/parseCREC');
 const {
     convertRollCallXMLToObject,
     fetchAndWriteRollCall,
@@ -35,11 +39,12 @@ const postgres = knex({
 
 
 //*****For grabbing voted bills/resolutions
-// let relatedItems = CREC.relatedItems;
+// getDataOfCREC(CREC.CRECObj)
+let relatedItems = CREC.relatedItems;
 
 // let relatedItemsWithCongVotesList = parseCRECForRelatedItemsWithCongVotes(relatedItems);
 // console.log(relatedItemsWithCongVotesList[0].identifier[4])
-// let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
+let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
 
 // votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach(measure => {
 //     console.log(measure);
@@ -49,7 +54,7 @@ const postgres = knex({
 //     console.log(measure);
 // })
 // console.log(votedMeasuresExtensionElements.senateVotedMeasuresObj)
-// console.log(votedMeasuresExtensionElements.hrVotedMeasuresObj)
+console.log(votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures[votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.length - 1].congVote[1])
 //*****
 
 

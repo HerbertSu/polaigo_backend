@@ -1,6 +1,7 @@
 const fs = require('fs');
 const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
+const {ACCESS_ARRAY} = require('../../constants/constants');
 
 //date format should be a string in yyyy-mm-dd
     //e.g. "2018-12-21"
@@ -181,6 +182,22 @@ let parseCRECForCongVotes = (relatedItemsRaw) => {
     };
 };
 
+let getDataOfCREC = (CRECObj) => {
+    let CRECVolumeAndNumber = CRECObj.titleInfo[ACCESS_ARRAY].partNumber[ACCESS_ARRAY];
+    let congressionalTermCREC = "";
+    let sessionCREC = "";
+
+    for(let i = 0; i < CRECObj.extension.length; i++){
+        let obj = CRECObj.extension[i];
+        if(obj.congress != undefined){
+            congressionalTermCREC = obj.congress[ACCESS_ARRAY];
+            sessionCREC = obj.session[ACCESS_ARRAY];
+            break;
+        }
+    }
+
+    console.log(sessionCREC);
+}
 
 module.exports = {
     convertCRECXMLToObject : convertCRECXMLToObject,
@@ -191,4 +208,5 @@ module.exports = {
     fetchCRECXMLFromDate : fetchCRECXMLFromDate,
     parseCRECForRelatedItemsWithCongVotes : parseCRECForRelatedItemsWithCongVotes,
     isObjectEmpty : isObjectEmpty,
+    getDataOfCREC, 
 }
