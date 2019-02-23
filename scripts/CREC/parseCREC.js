@@ -136,6 +136,22 @@ let populateVotedMeasuresObjCurried = (relatedItemsEntry) => (votedMeasuresObj) 
     votedMeasuresObj.votedMeasures[getObjectArrayIndex(votedMeasuresObj, "votedMeasures")]["rollCalls"] = rollCallList;
 }
 
+let isObjectEmpty = (object) => {
+    return Object.keys(object).length === 0 && object.constructor === Object;
+}
+
+let matchRollCallsWithCongVotes = (listOfVotedMeasuresObjects) => {
+    if(listOfVotedMeasuresObjects.length > 0){
+        listOfVotedMeasuresObjects.forEach( extensionObj => {
+            if(!isObjectEmpty(extensionObj)){
+                for(let i = 0; i < extensionObj.congVote.length; i++){
+                    extensionObj.congVote[i].rollCall = extensionObj.rollCalls[i];
+                }
+                delete extensionObj.rollCalls;
+            }
+        })
+    }
+}
 
 let parseCRECForCongVotes = (relatedItemsRaw) => {
     let hrVotedMeasuresObj = {};
@@ -150,67 +166,21 @@ let parseCRECForCongVotes = (relatedItemsRaw) => {
             populateVotedMeasuresObjCurried(relatedItems[item])(hrVotedMeasuresObj);
         }
     }
-    
 
-    /* Keep until you've taken out the code for retriving passedBills and failedBills from HOUSE
-    for(let item = 0; item < relatedItems.length; item++){
-        // if(relatedItems[item].extension[0].searchTitle[0].includes("MOTION TO REFER; Congressional Record Vol. 165, No. 1")){
-        //     console.log(relatedItems[item].extension[0])
-        // }
-        let rollCallList = [];
-        for(let i = 0; i < relatedItems[item].identifier.length; i++){
-            if(relatedItems[item].identifier[i].attr.type == "congressional vote number"){
-                rollCallList.push(relatedItems[item].identifier[i]["_"]);
-            }
-        }
-        
-        if(relatedItems[item].extension[0].granuleClass[0] == "SENATE"){
-            if(senateVotedMeasuresObj.votedMeasures == undefined){
-                senateVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
-            } else {
-                senateVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
-            }
-            //Add list of associated roll calls to the object
-            senateVotedMeasuresObj.votedMeasures[getObjectArrayLength(senateVotedMeasuresObj, "votedMeasures") - 1]["rollCalls"] = rollCallList;
-
-        } else if(relatedItems[item].extension[0].granuleClass[0] == "HOUSE" ) {
-            let congVote = relatedItems[item].extension[0].congVote[relatedItems[item].extension[0].congVote.length - 1];
-            if(congVote.isBillPassageQuestion !== undefined){
-                if(congVote.isBillPassageQuestion[0] == "true"){
-                    if(hrVotedMeasuresObj.passedBills == undefined){
-                        hrVotedMeasuresObj["passedBills"] = [relatedItems[item].extension[0]]
-                    } else {
-                        hrVotedMeasuresObj.passedBills.push(relatedItems[item].extension[0]);
-                    }
-                }
-                //Add list of associated roll calls to the object
-                hrVotedMeasuresObj.passedBills[getObjectArrayLength(hrVotedMeasuresObj, "passedBills") - 1]["rollCalls"] = rollCallList;
-            } else if (congVote.result[0].includes("rejected")){
-                if(hrVotedMeasuresObj.failedBills == undefined){
-                    hrVotedMeasuresObj["failedBills"] = [relatedItems[item].extension[0]]
-                } else {
-                    hrVotedMeasuresObj.failedBills.push(relatedItems[item].extension[0]);
-                }
-                //Add list of associated roll calls to the object
-                hrVotedMeasuresObj.failedBills[getObjectArrayLength(hrVotedMeasuresObj, "failedBills") - 1]["rollCalls"] = rollCallList;
-            } else {
-                if(hrVotedMeasuresObj.votedMeasures == undefined){
-                    hrVotedMeasuresObj["votedMeasures"] = [relatedItems[item].extension[0]]
-                } else {
-                    hrVotedMeasuresObj.votedMeasures.push(relatedItems[item].extension[0]);
-                }
-                //Add list of associated roll calls to the object
-                hrVotedMeasuresObj.votedMeasures[getObjectArrayLength(hrVotedMeasuresObj, "votedMeasures") - 1]["rollCalls"] = rollCallList;
-            }
-        }
+    if(!isObjectEmpty(senateVotedMeasuresObj)){
+        matchRollCallsWithCongVotes(senateVotedMeasuresObj.votedMeasures)
     }
-    */
+
+    if(!isObjectEmpty(hrVotedMeasuresObj)){
+        matchRollCallsWithCongVotes(hrVotedMeasuresObj.votedMeasures)
+    }
 
     return {
         senateVotedMeasuresObj : senateVotedMeasuresObj,
         hrVotedMeasuresObj : hrVotedMeasuresObj,
     };
-}
+};
+
 
 module.exports = {
     convertCRECXMLToObject : convertCRECXMLToObject,
@@ -220,4 +190,5 @@ module.exports = {
     parseCRECForCongVotes : parseCRECForCongVotes,
     fetchCRECXMLFromDate : fetchCRECXMLFromDate,
     parseCRECForRelatedItemsWithCongVotes : parseCRECForRelatedItemsWithCongVotes,
+    isObjectEmpty : isObjectEmpty,
 }

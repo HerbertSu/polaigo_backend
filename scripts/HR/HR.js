@@ -8,6 +8,9 @@ const {ACCESS_ARRAY} = require('../../constants/constants');
     //objects in a list and insert them later as an individual list?
     //Check the options of knex's update()
 
+
+
+
 let fetchAndWriteRepresentativesData = () => {
     
     fetch('http://clerk.house.gov/xml/lists/MemberData.xml')
