@@ -196,7 +196,11 @@ let getDataOfCREC = (CRECObj) => {
         }
     }
 
-    console.log(sessionCREC);
+    return {
+        CRECVolumeAndNumber,
+        congressionalTermCREC,
+        sessionCREC,
+    }
 }
 
 module.exports = {
