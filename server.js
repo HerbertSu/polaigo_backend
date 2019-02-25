@@ -6,10 +6,12 @@ const {
     parseCRECForCongVotes, 
     parseCRECForRelatedItemsWithCongVotes,
     getDataOfCREC,
+    getAllHRRollCallsFromCREC,
     } = require('./scripts/CREC/parseCREC');
 const {
     convertRollCallXMLToObject,
     fetchAndWriteRollCall,
+    getRollCallDataFromHRClerk,
     } = require('./scripts/RollCall/RollCall');
 const {
     convertHRMemberXMLToObj, 
@@ -74,36 +76,42 @@ updateRepresentativesActiveTable(HRMemberList, postgres);
 
 let relatedItems = CREC.relatedItems;
 let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
-let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CREC.CRECObj);
-let listOfCRECCongVotes = [];
+let CRECObj = CREC.CRECObj;
 
-votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
-    let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
-    let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
-    let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
-    voteExtensionObj.congVote.forEach((voteObj) => {
-        let rollNumber = voteObj.attr.number;
-        // delete voteObj.congMember;
-        listOfCRECCongVotes.push({
-            CRECVolumeAndNumber,
-            congressionalTermCREC,
-            sessionCREC,
-            chamber,
-            dateOfVote,
-            timeOfVote,
-            rollNumber,
-            ...voteObj,
-        })
-    })
+let rollCallHRListCREC = getAllHRRollCallsFromCREC(votedMeasuresExtensionElements, CRECObj);
+console.log(rollCallHRListCREC)
+// let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CREC.CRECObj);
+// let listOfCRECCongVotes = [];
 
-})
+// votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
+//     let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
+//     let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
+//     let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
+//     voteExtensionObj.congVote.forEach((voteObj) => {
+//         let rollNumber = voteObj.attr.number;
+//         // delete voteObj.congMember;
+//         listOfCRECCongVotes.push({
+//             CRECVolumeAndNumber,
+//             congressionalTermCREC,
+//             sessionCREC,
+//             chamber,
+//             dateOfVote,
+//             timeOfVote,
+//             rollNumber,
+//             ...voteObj,
+//         })
+//     })
 
-listOfCRECCongVotes.forEach((congVote) => {
-    let yearOfVote = new Date(congVote.dateOfVote).getFullYear();
-    let roll = congVote.rollNumber;
-    fetchAndWriteRollCall(yearOfVote, roll);
-})
+// })
 
+// listOfCRECCongVotes.forEach((congVote) => {
+//     let yearOfVote = new Date(congVote.dateOfVote).getFullYear();
+//     let roll = congVote.rollNumber;
+//     fetchAndWriteRollCall(yearOfVote, roll);
+// })
+
+let rollDataClerk = getRollCallDataFromHRClerk("./test/ROLL-2019-001.txt");
+// console.log(rollDataClerk)
 
 
 

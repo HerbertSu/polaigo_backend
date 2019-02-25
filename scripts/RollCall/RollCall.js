@@ -71,13 +71,13 @@ items of interest:
 
 */
     
-let getRollCallDataFromHRClerk = () => {
-    let rollCallObj = convertRollCallXMLToObject("./test/ROLL-2019-003.txt");
+let getRollCallDataFromHRClerk = (xmlFilePath) => {
+    let rollCallObj = convertRollCallXMLToObject(xmlFilePath);
     let voteMetaData = rollCallObj["vote-metadata"];
     let voteData = rollCallObj["vote-data"][ACCESS_ARRAY]["recorded-vote"];
 
     let congressTerm = voteMetaData[ACCESS_ARRAY].congress[ACCESS_ARRAY];
-    let session = voteMetaData[ACCESS_ARRAY].session[ACCESS_ARRAY];
+    let session = parseInt(voteMetaData[ACCESS_ARRAY].session[ACCESS_ARRAY]);
     let chamber = voteMetaData[ACCESS_ARRAY].chamber[ACCESS_ARRAY];
     let roll = voteMetaData[ACCESS_ARRAY]["rollcall-num"][ACCESS_ARRAY];
     let legislatureNumber = voteMetaData[ACCESS_ARRAY]["legis-num"][ACCESS_ARRAY];
@@ -95,11 +95,25 @@ let getRollCallDataFromHRClerk = () => {
             vote
         }
     })
-    console.log(representativesVotesList)
+
+    return {
+        congressTerm,
+        session,
+        chamber,
+        roll,
+        legislatureNumber,
+        voteQuestion,
+        voteResult,
+        voteDate,
+        voteTime,
+        voteDescription,
+        representativesVotesList,
+    };
 }
 
 
 module.exports = {
     fetchAndWriteRollCall : fetchAndWriteRollCall,
     convertRollCallXMLToObject : convertRollCallXMLToObject,
+    getRollCallDataFromHRClerk,
 }

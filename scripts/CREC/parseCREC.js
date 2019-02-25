@@ -203,6 +203,61 @@ let getDataOfCREC = (CRECObj) => {
     }
 }
 
+// Returns a customized object containing a list of objects. Each object is a roll call recorded
+    //in the CREC.
+let getAllHRRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
+    let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CRECObj);
+    let listOfCRECCongVotes = [];
+
+    votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
+        let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
+        let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
+        let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
+        voteExtensionObj.congVote.forEach((voteObj) => {
+            let rollNumber = voteObj.attr.number;
+            // delete voteObj.congMember;
+            listOfCRECCongVotes.push({
+                CRECVolumeAndNumber,
+                congressionalTermCREC,
+                sessionCREC,
+                chamber,
+                dateOfVote,
+                timeOfVote,
+                rollNumber,
+                ...voteObj,
+            })
+        })
+    })
+    return listOfCRECCongVotes
+}
+
+let getAllSenateRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
+    let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CRECObj);
+    let listOfCRECCongVotes = [];
+
+    votedMeasuresExtensionElements.senateVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
+        let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
+        let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
+        let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
+        voteExtensionObj.congVote.forEach((voteObj) => {
+            let rollNumber = voteObj.attr.number;
+            // delete voteObj.congMember;
+            listOfCRECCongVotes.push({
+                CRECVolumeAndNumber,
+                congressionalTermCREC,
+                sessionCREC,
+                chamber,
+                dateOfVote,
+                timeOfVote,
+                rollNumber,
+                ...voteObj,
+            })
+        })
+    })
+    return listOfCRECCongVotes
+}
+
+
 module.exports = {
     convertCRECXMLToObject : convertCRECXMLToObject,
     retrieveCRECSubSections : retrieveCRECSubSections,
@@ -213,4 +268,6 @@ module.exports = {
     parseCRECForRelatedItemsWithCongVotes : parseCRECForRelatedItemsWithCongVotes,
     isObjectEmpty : isObjectEmpty,
     getDataOfCREC, 
+    getAllHRRollCallsFromCREC,
+    getAllSenateRollCallsFromCREC,
 }
