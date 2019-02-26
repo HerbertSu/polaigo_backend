@@ -79,39 +79,81 @@ let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
 let CRECObj = CREC.CRECObj;
 
 let rollCallHRListCREC = getAllHRRollCallsFromCREC(votedMeasuresExtensionElements, CRECObj);
-console.log(rollCallHRListCREC)
-// let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CREC.CRECObj);
-// let listOfCRECCongVotes = [];
 
-// votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
-//     let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
-//     let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
-//     let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
-//     voteExtensionObj.congVote.forEach((voteObj) => {
-//         let rollNumber = voteObj.attr.number;
-//         // delete voteObj.congMember;
-//         listOfCRECCongVotes.push({
-//             CRECVolumeAndNumber,
-//             congressionalTermCREC,
-//             sessionCREC,
-//             chamber,
-//             dateOfVote,
-//             timeOfVote,
-//             rollNumber,
-//             ...voteObj,
-//         })
-//     })
+rollCallHRListCREC.forEach( async (congVote) => {
+    let yearOfVote = new Date(congVote.dateOfVote).getFullYear();
+    let roll = congVote.rollNumber;
+    let xmlFileName = await fetchAndWriteRollCall(yearOfVote, roll);
+    let rollDataClerk = getRollCallDataFromHRClerk(xmlFileName);
 
-// })
+    // postgres("roll_call_votes_hr").insert({
+    //     roll : rollDataClerk.roll,
+    //     congressterm : rollDataClerk.congressTerm,
+    //     session : rollDataClerk.session,
+    //     result : rollDataClerk.voteResult,
+    //     crecofvote : congVote.CRECVolumeAndNumber,
+    //     date : rollDataClerk.voteDate,
+    //     issue : rollDataClerk.legislatureNumber,
+    //     question : rollDataClerk.voteQuestion,
+    // }
+    // ).then(res=>{
+    //     console.log("inserted");
+    // }).catch(err=>{
+    //     if(err.code == '23505'){
+    //         console.log("Duplicate key found: ", err.detail);
+    //     }else{
+    //         console.log(err);
+    //     }
+    // })
 
-// listOfCRECCongVotes.forEach((congVote) => {
-//     let yearOfVote = new Date(congVote.dateOfVote).getFullYear();
-//     let roll = congVote.rollNumber;
-//     fetchAndWriteRollCall(yearOfVote, roll);
-// })
+    let {representativesVotesList} = rollDataClerk;
 
-let rollDataClerk = getRollCallDataFromHRClerk("./test/ROLL-2019-001.txt");
-// console.log(rollDataClerk)
+    let rollString = String(roll);
+    if(rollString.length < 3){
+        roll = rollString.padStart(3, "0");
+    }
+    let congressTerm = rollDataClerk.congressTerm;
+    let session = rollDataClerk.session;
+
+    let voteHistoryKey = `${congressTerm}_${session}_${roll}`;
+    
+    let bioguideidsList = await postgres.select("bioguideid")
+        .from("vote_histories_hr_active")
+        .orderBy("bioguideid");
+    //Select * from vote_histories_hr_active
+    //Search returned list's bioguideid values to see  if member is in there
+    //if yes, check the json keys to see if the voteHistoryKey is already there
+        //if yes, skip
+        //else, add onto the json key
+    //else, add a new entry with bioguideid and vote
+    
+    //Cannot update multiple entries at a time because update doesn't take arrays
+    console.log(binarySearchListOfObjects("C001118", bioguideidsList, "bioguideid"));
+})
+
+
+
+let binarySearchListOfObjects = (item, list, listKey) => {
+    while(true){
+        let middleIndex = Math.floor((list.length)/2);
+        if(item > list[middleIndex][listKey]){
+            list = list.slice(middleIndex + 1);
+        } else if (item < list[middleIndex][listKey]){
+            list = list.slice(0, middleIndex);
+        } else {
+            if(list.length == 0){
+                return false;
+            }
+            else{
+                return true;
+            }
+        }
+    }
+}
+
+
+
+
 
 
 

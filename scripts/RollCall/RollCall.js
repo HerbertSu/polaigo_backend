@@ -3,34 +3,33 @@ const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
 const {ACCESS_ARRAY} = require('../../constants/constants');
 
-let fetchAndWriteRollCall = (year, roll) => {
-    let rollString = String(roll);
-    if(rollString.length < 3){
-        roll = rollString.padStart(3, "0");
-    }
-
-    let hrClerkRollCallXMLFileName = `./test/ROLL-${year}-${roll}.txt`;
-    if(!fs.existsSync(hrClerkRollCallXMLFileName)){
-        fetch(`http://clerk.house.gov/evs/${year}/roll${roll}.xml`)
-            .then(res => {
-                if(res.status == 404){
+let fetchAndWriteRollCall = async (year, roll) => {
+        let rollString = String(roll);
+        if(rollString.length < 3){
+            roll = rollString.padStart(3, "0");
+        }
+        let hrClerkRollCallXMLFileName = `./test/ROLL-${year}-${roll}.txt`;
+        if(!fs.existsSync(hrClerkRollCallXMLFileName)){
+            try{
+                let response = await fetch(`http://clerk.house.gov/evs/${year}/roll${roll}.xml`);
+                let xml = undefined;
+                if(response.status == 404){
                     throw 404;
-                } else {
-                    return res.text()
+                }else{
+                    xml = await response.text();
                 }
-            })
-            .then(xml => {
-                fs.writeFile(hrClerkRollCallXMLFileName, xml, err=>{
+                fs.writeFileSync(hrClerkRollCallXMLFileName, xml, err=>{
                     if(err){
-                        console.log(err)
+                        throw (err);
                     }
                 })
-            })
-            .catch(err => {
-                console.log(err)
-            })
-    }
+            }catch(err){
+                console.log(err);
+            }
+        }
+        return hrClerkRollCallXMLFileName;
 }
+
 
 
 let convertRollCallXMLToObject = (xmlFilepath) => {
@@ -80,12 +79,33 @@ let getRollCallDataFromHRClerk = (xmlFilePath) => {
     let session = parseInt(voteMetaData[ACCESS_ARRAY].session[ACCESS_ARRAY]);
     let chamber = voteMetaData[ACCESS_ARRAY].chamber[ACCESS_ARRAY];
     let roll = voteMetaData[ACCESS_ARRAY]["rollcall-num"][ACCESS_ARRAY];
-    let legislatureNumber = voteMetaData[ACCESS_ARRAY]["legis-num"][ACCESS_ARRAY];
-    let voteQuestion = voteMetaData[ACCESS_ARRAY]["vote-question"][ACCESS_ARRAY];
-    let voteResult = voteMetaData[ACCESS_ARRAY]["vote-result"][ACCESS_ARRAY];
-    let voteDate = voteMetaData[ACCESS_ARRAY]["action-date"][ACCESS_ARRAY];
-    let voteTime = voteMetaData[ACCESS_ARRAY]["action-time"][ACCESS_ARRAY].attr['time-etz'];
-    let voteDescription = voteMetaData[ACCESS_ARRAY]["vote-desc"][ACCESS_ARRAY];
+    
+    let legislatureNumber = "";
+    let voteQuestion = "";
+    let voteResult = "";
+    let voteDate = "";
+    let voteTime = "";
+    let voteDescription = "";
+
+    if(voteMetaData[ACCESS_ARRAY]["legis-num"] != undefined){
+        legislatureNumber = voteMetaData[ACCESS_ARRAY]["legis-num"][ACCESS_ARRAY];
+    }
+    if(voteMetaData[ACCESS_ARRAY]["vote-question"] != undefined){
+        voteQuestion = voteMetaData[ACCESS_ARRAY]["vote-question"][ACCESS_ARRAY];
+    }
+    if(voteMetaData[ACCESS_ARRAY]["vote-result"] != undefined){
+        voteResult = voteMetaData[ACCESS_ARRAY]["vote-result"][ACCESS_ARRAY];
+    }
+    if(voteMetaData[ACCESS_ARRAY]["action-date"] != undefined){
+        voteDate = voteMetaData[ACCESS_ARRAY]["action-date"][ACCESS_ARRAY];
+    }
+    if(voteMetaData[ACCESS_ARRAY]["action-time"] != undefined){
+        voteTime = voteMetaData[ACCESS_ARRAY]["action-time"][ACCESS_ARRAY].attr['time-etz'];
+    }
+    if(voteMetaData[ACCESS_ARRAY]["vote-desc"] != undefined){
+        voteDescription = voteMetaData[ACCESS_ARRAY]["vote-desc"][ACCESS_ARRAY];
+    }
+
 
     let representativesVotesList = voteData.map((legislatorVoteObj) => {
         let bioguideid = legislatorVoteObj.legislator[ACCESS_ARRAY].attr["name-id"];
@@ -108,6 +128,7 @@ let getRollCallDataFromHRClerk = (xmlFilePath) => {
         voteTime,
         voteDescription,
         representativesVotesList,
+    
     };
 }
 

@@ -161,10 +161,6 @@ let updateVoteHistoriesActiveBioGuideIds = (postgres) => {
 
     let bioIdGuideListFromSQL = [];
     
-    postgres.from("representatives_of_hr_active").select("bioguideid")
-        .then(res => {
-            bioIdGuideListFromSQL = res;
-        })
     postgres.transaction( trx => {
         trx.select("bioguideid")
             .from("representatives_of_hr_active")
