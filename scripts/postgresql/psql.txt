@@ -81,6 +81,10 @@ CREATE TABLE IF NOT EXISTS vote_histories_hr_inactive(
     votingHistory JSON
 );
 
+CREATE TABLE date_of_last_hr_members_update(
+    date DATE PRIMARY KEY
+);
+
 //Create party_codes table
 CREATE TABLE IF NOT EXISTS party_codes(
     partyCode CHAR PRIMARY KEY,

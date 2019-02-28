@@ -4,30 +4,30 @@ const parseString = require('xml2js').parseString;
 const {ACCESS_ARRAY} = require('../../constants/constants');
 
 let fetchAndWriteRollCall = async (year, roll) => {
-        let rollString = String(roll);
-        if(rollString.length < 3){
-            roll = rollString.padStart(3, "0");
-        }
-        let hrClerkRollCallXMLFileName = `./test/ROLL-${year}-${roll}.txt`;
-        if(!fs.existsSync(hrClerkRollCallXMLFileName)){
-            try{
-                let response = await fetch(`http://clerk.house.gov/evs/${year}/roll${roll}.xml`);
-                let xml = undefined;
-                if(response.status == 404){
-                    throw 404;
-                }else{
-                    xml = await response.text();
-                }
-                fs.writeFileSync(hrClerkRollCallXMLFileName, xml, err=>{
-                    if(err){
-                        throw (err);
-                    }
-                })
-            }catch(err){
-                console.log(err);
+    let rollString = String(roll);
+    if(rollString.length < 3){
+        roll = rollString.padStart(3, "0");
+    }
+    let hrClerkRollCallXMLFileName = `./test/ROLL-${year}-${roll}.txt`;
+    if(!fs.existsSync(hrClerkRollCallXMLFileName)){
+        try{
+            let response = await fetch(`http://clerk.house.gov/evs/${year}/roll${roll}.xml`);
+            let xml = undefined;
+            if(response.status == 404){
+                throw 404;
+            }else{
+                xml = await response.text();
             }
+            fs.writeFileSync(hrClerkRollCallXMLFileName, xml, err=>{
+                if(err){
+                    throw (err);
+                }
+            })
+        }catch(err){
+            console.log(err);
         }
-        return hrClerkRollCallXMLFileName;
+    }
+    return hrClerkRollCallXMLFileName;
 }
 
 
@@ -45,30 +45,6 @@ let convertRollCallXMLToObject = (xmlFilepath) => {
     })
     return rollCallObj;
 }
-
-
-/*
-items of interest:
-    vote-metadata
-        congress
-        session
-        chamber     ?
-        rollcall-num
-        legis-num           (bill/resolution number)
-        vote-question
-        vote-result
-        action-date
-        action-time.attr.etz
-        vote-desc   ?
-    vote-data
-        recorded-vote
-            legislator.attr.name-id
-            legislator.attr.state
-            legislator value (last name of rep)
-            vote value (Yea or Nay)
-
-
-*/
     
 let getRollCallDataFromHRClerk = (xmlFilePath) => {
     let rollCallObj = convertRollCallXMLToObject(xmlFilePath);

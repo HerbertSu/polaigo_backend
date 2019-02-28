@@ -1,6 +1,7 @@
 const fs = require('fs');
 const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
+const {upsertQueryRaw} = require('../postgresql/psql');
 const {ACCESS_ARRAY} = require('../../constants/constants');
 
 //TODO Should I insert/update the representatives_of_hr_active psql table
@@ -8,27 +9,47 @@ const {ACCESS_ARRAY} = require('../../constants/constants');
     //objects in a list and insert them later as an individual list?
     //Check the options of knex's update()
 
+    /**
+     * 
+     * @param date any date format valid to the Date object
+     * @returns yyyy-mm-dd 
+     */
+let dateify = (date) => {
+    let datified = new Date(date);
+    let dd = datified.getDate();
+    let mm = datified.getMonth() + 1;
+    let yyyy = datified.getFullYear();
 
-
-
-let fetchAndWriteRepresentativesData = () => {
+    if (dd < 10) {
+        dd = '0' + dd;
+    }
     
-    fetch('http://clerk.house.gov/xml/lists/MemberData.xml')
+    if (mm < 10) {
+        mm = '0' + mm;
+    }
+
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * @returns Filepath to the Member.xml data received from clerk.house.gov
+ */
+let fetchAndWriteRepresentativesData = async () => {
+    let hrMemberDataXMLFileName = "";
+    await fetch('http://clerk.house.gov/xml/lists/MemberData.xml')
         .then( xml => xml.text())
         .then( data => {
             let publishDate = "";
-
             parseString(data, {
                 trim: true, 
                 attrkey: 'attr',
             }, 
             function (err, result){
-                publishDate = result.MemberData.attr["publish-date"];
-                publishDate = publishDate.replace(/,/g, '');
-                publishDate = publishDate.split(" ").join("-");
+                publishDate = dateify(result.MemberData.attr["publish-date"]);
             })
 
-            let hrMemberDataXMLFileName = `./test/HR-Representatives-Data-${publishDate}.txt`;
+            hrMemberDataXMLFileName = `./test/HR-Representatives-Data-${publishDate}.txt`;
+
             if(!fs.existsSync(hrMemberDataXMLFileName)){
                 fs.writeFile(hrMemberDataXMLFileName, data, err=>{
                     if(err){
@@ -37,6 +58,7 @@ let fetchAndWriteRepresentativesData = () => {
                 })
             }
         })
+    return hrMemberDataXMLFileName;
 }
 
 
@@ -55,13 +77,18 @@ let convertHRMemberXMLToObj = (xmlFilePath) => {
     return memberObj;
 }
 
+const getDateOfClerksMemberXML = (representativesObj) => {
+    let dateOfMemberData = representativesObj.attr["publish-date"];
+    return dateify(dateOfMemberData);
+}
+
 
     
 let parseHRMemberDataObj = (representativesObj) => {
     let HRMemberList = [];
     
     let representativesList = representativesObj.members[ACCESS_ARRAY].member;
-    let dateOfMemberData = representativesObj.attr["publish-date"];
+    let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
 
     for(let index = 0; index < representativesList.length; index++){
         
@@ -105,6 +132,10 @@ let parseHRMemberDataObj = (representativesObj) => {
 
 }
 
+/*
+-fetchAndWriteRepresentativesData() to get most up-to-date list of representatives.
+
+*/
 
 let compareActiveRepresentativesForUpdates = (HRMemberList, postgres) => {
     postgres.select()
@@ -126,7 +157,14 @@ let compareActiveRepresentativesForUpdates = (HRMemberList, postgres) => {
         //OR
         //select * from reps_of_hr_active;
         //compare HRMemberList with the returned data
-let updateRepresentativesActiveTable = (HRMemberList, postgres) => {
+
+/**
+ * 
+ * @param {*} HRMemberList A list returned from parseHRMemberDataObj() containing a list of the current members of the HR retrieved from clerk.house.gov
+ * @param {*} dateOfUpdate Date of said member data
+ * @param {*} postgres 
+ */
+let updateRepresentativesActiveTable = (HRMemberList, dateOfUpdate, postgres, ) => {
     postgres.transaction( trx => {
         trx.table("representatives_of_hr_active")
             .truncate()
@@ -134,9 +172,29 @@ let updateRepresentativesActiveTable = (HRMemberList, postgres) => {
                 return trx.insert(HRMemberList)
                     .into("representatives_of_hr_active")
                     .then(res =>{
-                        console.log("representatives_of_hr_active table has been updated.")
+                        console.log("representatives_of_hr_active table has been updated.");
+                        return trx.table("date_of_last_hr_members_update")
+                            .truncate()
+                            .then( (res) => {
+                                return trx.table("date_of_last_hr_members_update")
+                                    .insert({
+                                        date : dateOfUpdate
+                                    })
+                                    .then(res => {
+                                        console.log("date_of_last_hr_members_update table has been updated.")
+                                    })
+                                    .catch(err=>{
+                                        throw `Could not insert into date_of_last_hr_members_update table, ${err} `;
+                                    })
+                            })
+                            .catch(err=>{
+                                throw `Could not truncate date_of_last_hr_members_update table, ${err} `;
+                            }) 
                     })
-            })
+                    .catch(err => {
+                        throw `Could not update representatives_of_hr_active table, ${err}`;
+                    })                    
+                })
         .then(trx.commit)        
         .catch( (err) => {
             console.log(err);
@@ -145,15 +203,6 @@ let updateRepresentativesActiveTable = (HRMemberList, postgres) => {
     })
 }   
 
-//@param columnListFromSQL is a list of a single column's {column : value} objects returned from a knex SELECT query
-let upsertQueryRaw = (tableName, columnName, columnListFromSQL, conflict="", action="DO NOTHING" ) =>{
-    let valuesList = columnListFromSQL.map((columnObj)=>{
-        return "('" + Object.values(columnObj)[0] + "')";
-    });
-    let valuesString = valuesList.join(",")
-    let upsert = `INSERT INTO ${tableName} (${columnName}) VALUES ${valuesString} ON CONFLICT ${conflict} ${action};`;
-    return upsert;
-}
 
 let updateVoteHistoriesActiveBioGuideIds = (postgres) => {
     let tableName = "vote_histories_hr_active";
@@ -186,5 +235,6 @@ module.exports = {
     updateRepresentativesActiveTable,
     compareActiveRepresentativesForUpdates,
     updateVoteHistoriesActiveBioGuideIds,
+    getDateOfClerksMemberXML,
 }
 

@@ -18,7 +18,12 @@ const {
     parseHRMemberDataObj,
     updateRepresentativesActiveTable,
     updateVoteHistoriesActiveBioGuideIds,
+    fetchAndWriteRepresentativesData,
+    getDateOfClerksMemberXML,
     } = require('./scripts/HR/HR');
+const {
+    insertIntoTable_roll_call_votes_hr, 
+} = require('./scripts/postgresql/psql');
 const {ACCESS_ARRAY} = require("./constants/constants");
 
 const knex = require('knex');
@@ -61,19 +66,24 @@ const postgres = knex({
 //*****
 
 
-/*****
+
 //For populating representatives_of_hr_active table
-let representativesObj = convertHRMemberXMLToObj('./test/HR-Representatives-Data-February-11-2019.txt');
-let HRMemberList = parseHRMemberDataObj(representativesObj);
-updateRepresentativesActiveTable(HRMemberList, postgres);
-*****/
+// ( async () => {
+//     let xmlFilePath = await fetchAndWriteRepresentativesData();
+//     let representativesObj = convertHRMemberXMLToObj(xmlFilePath);
+//     let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
+//     let HRMemberList = parseHRMemberDataObj(representativesObj);
+//     updateRepresentativesActiveTable(HRMemberList, dateOfMemberData, postgres);
+// })();
+
+
+
 
 //***** For Updating the vote histories 
 // updateVoteHistoriesActiveBioGuideIds(postgres);
 //*****
 
 // fetchAndWriteRollCall('2019', '3');
-
 let relatedItems = CREC.relatedItems;
 let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
 let CRECObj = CREC.CRECObj;
@@ -87,40 +97,24 @@ let rollCallHRListCREC = getAllHRRollCallsFromCREC(votedMeasuresExtensionElement
     //in January.
     //Check if member is in representatives_of_hr_active table. 
         //If so, 
-let gatherAndUpsertRollCallData = async (rollCallHRListCREC) => {
+let gatherAndUpsertRollCallData = async (rollCallHRListCREC, postgres) => {
     
     for(const congVote of rollCallHRListCREC){
         let potentialVoteHistoriesInsert = [];
-        let yearOfVote = new Date(congVote.dateOfVote).getFullYear();
+        let dateOfVote = new Date(congVote.dateOfVote);
+        let yearOfVote = dateOfVote.getFullYear();
         let roll = congVote.rollNumber;
         let xmlFileName = await fetchAndWriteRollCall(yearOfVote, roll);
         let rollDataClerk = getRollCallDataFromHRClerk(xmlFileName);
         let {representativesVotesList} = rollDataClerk;
         
-        // await postgres("roll_call_votes_hr").insert({
-        //     roll : rollDataClerk.roll,
-        //     congressterm : rollDataClerk.congressTerm,
-        //     session : rollDataClerk.session,
-        //     result : rollDataClerk.voteResult,
-        //     crecofvote : congVote.CRECVolumeAndNumber,
-        //     date : rollDataClerk.voteDate,
-        //     issue : rollDataClerk.legislatureNumber,
-        //     question : rollDataClerk.voteQuestion,
-        // }
-        // ).then(res=>{
-        //     console.log("inserted");
-        // }).catch(err=>{
-        //     if(err.code == '23505'){
-        //         console.log("Duplicate key found: ", err.detail);
-        //     }else{
-        //         console.log(err);
-        //     }
-        // })
+        insertIntoTable_roll_call_votes_hr(rollDataClerk, congVote);
 
         let rollString = String(roll);
         if(rollString.length < 3){
             rollString = rollString.padStart(3, "0");
         }
+
         let congressTerm = rollDataClerk.congressTerm;
         let session = rollDataClerk.session;
 
@@ -144,7 +138,6 @@ let gatherAndUpsertRollCallData = async (rollCallHRListCREC) => {
                     }
                 }
                 matchedRep.votinghistory[voteHistoryKey] = {voted : repObj.vote};
-
                 await postgres("vote_histories_hr_active")
                     .where({
                         bioguideid : repObj.bioguideid
@@ -153,26 +146,96 @@ let gatherAndUpsertRollCallData = async (rollCallHRListCREC) => {
                         votinghistory : matchedRep.votinghistory
                     })
             } else {
-                let voteHistoryObj = { voteHistoryKey : {voted : repObj.vote} };
-                potentialVoteHistoriesInsert.push({
-                    bioguideid : repObj.bioguideid,
-                    votinghistory : voteHistoryObj
-                })
+                let dateOfLastMemberUpdate = await postgres("date_of_last_hr_members_update")
+                    .select()[ACCESS_ARRAY];
+                
+                dateOfLastMemberUpdate = new Date(dateOfLastMemberUpdate);
+                
+                if(dateOfVote < dateOfLastMemberUpdate){
+                    console.log(dateOfVote)
+                    console.log(dateOfLastMemberUpdate)
+                    let vote_histories_hr_inactive_TableEntries = await postgres.select()
+                        .from("vote_histories_hr_inactive")
+                        .orderBy("bioguideid");
+                    
+                    let isRepresentativeInTable = binarySearchListOfObjects(repObj.bioguideid, vote_histories_hr_inactive_TableEntries, "bioguideid");
+
+                    if(isRepresentativeInTable !== false){
+                        let matchedRep = vote_histories_hr_inactive_TableEntries[isRepresentativeInTable];
+                        if(matchedRep.votinghistory == null){
+                            matchedRep.votinghistory = {};
+                        } else {
+                            let rollVotes = Object.keys(matchedRep.votinghistory);
+                            //Skips update if roll call is already present in table for the user
+                            if(rollVotes.includes(voteHistoryKey)){
+                                continue;
+                            }
+                        }
+                        matchedRep.votinghistory[voteHistoryKey] = {voted : repObj.vote};
+                        await postgres("vote_histories_hr_inactive")
+                            .where({
+                                bioguideid : repObj.bioguideid
+                            })
+                            .update({
+                                votinghistory : matchedRep.votinghistory
+                            })
+                    } else {
+                        let voteHistoryObj = { voteHistoryKey : {voted : repObj.vote} };
+                        potentialVoteHistoriesInsert.push({
+                            bioguideid : repObj.bioguideid,
+                            votinghistory : voteHistoryObj
+                        });
+                    }
+                } else {
+                    throw `Representative ${repObj.bioguideid} is neither in vote_histories_hr_active nor vote_histories_hr_inactive. Please check the date of the roll call vote against the date of the most recently updated Member.xml from clerk.house.gov. Perhaps the list of currently active representatives in the 'representatives_of_hr_active' table needs to be updated.`;
+                }  
             }
         }
         if(potentialVoteHistoriesInsert.length > 0){
-            let dateOfVote = new Date(congVote.dateOfVote);
-            let today = new Date();
-            console.log(potentialVoteHistoriesInsert);
-            // let inserted = await postgres("vote_histories_hr_active",["bioguideid"])
-            //     .insert(potentialVoteHistoriesInsert);
-            // console.log(inserted[0]);
+            let inserted = await postgres("vote_histories_hr_inactive",["bioguideid"])
+                .insert(potentialVoteHistoriesInsert);
+            console.log(inserted[0]);
         }
     }
 }
 
-updateVoteHistoriesActiveBioGuideIds(postgres)
-// let data = gatherAndUpsertRollCallData(rollCallHRListCREC);
+// updateVoteHistoriesActiveBioGuideIds(postgres)
+let data = gatherAndUpsertRollCallData(rollCallHRListCREC, postgres);
+
+// /**
+//  * 
+//  * @param {Object} repObj An element in the array 'representativesVotesList' generated from getRollCallDataFromHRClerk()
+//  * @param {string} voteHistoriesTableName 'vote_histories_hr_active' OR 'vote_histories_hr_inactive'
+//  * @param {Array} vote_histories_tableEntries The list returned from a SELECT query on a 'vote_histories_hr_...' table
+//  * @param {*} isRepresentativeInTable Return value from binarySearchListOfObjects() for the vote_histories_... table in question.
+//  * @param {string} voteHistoryKey Key value for a potential entry into 'votinghistory' JSON of the vote_histories... table in queastion.
+//  */
+// const insertOrUpdateVotingHistory = (
+//         repObj, 
+//         voteHistoriesTableName, 
+//         vote_histories_tableEntries, 
+//         isRepresentativeInTable, 
+//         voteHistoryKey
+//     ) => {
+//     let matchedRep = vote_histories_tableEntries[isRepresentativeInTable];
+//     if(matchedRep.votinghistory == null){
+//         matchedRep.votinghistory = {};
+//     } else {
+//         let rollVotes = Object.keys(matchedRep.votinghistory);
+//         //Skips update if roll call is already present in table for the user
+//         if(rollVotes.includes(voteHistoryKey)){
+//             continue;
+//         }
+//     }
+//     matchedRep.votinghistory[voteHistoryKey] = {voted : repObj.vote};
+//     await postgres(voteHistoriesTableName)
+//         .where({
+//             bioguideid : repObj.bioguideid
+//         })
+//         .update({
+//             votinghistory : matchedRep.votinghistory
+//         })
+// }
 
 
 //     //Select * from vote_histories_hr_active
