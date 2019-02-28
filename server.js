@@ -79,176 +79,108 @@ let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
 let CRECObj = CREC.CRECObj;
 
 let rollCallHRListCREC = getAllHRRollCallsFromCREC(votedMeasuresExtensionElements, CRECObj);
-let potentialVoteHistoriesInsert = [];
 
-let CHECK = false;
 
-rollCallHRListCREC.forEach( async (congVote) => {
+
+//TODO What to do if a member is not in representatives_of_hr_active
+    //e.g. Representative retired in February but I am checking out a vote that took place
+    //in January.
+    //Check if member is in representatives_of_hr_active table. 
+        //If so, 
+let gatherAndUpsertRollCallData = async (rollCallHRListCREC) => {
     
-    let yearOfVote = new Date(congVote.dateOfVote).getFullYear();
-    let roll = congVote.rollNumber;
-    let xmlFileName = await fetchAndWriteRollCall(yearOfVote, roll);
-    let rollDataClerk = getRollCallDataFromHRClerk(xmlFileName);
+    for(const congVote of rollCallHRListCREC){
+        let potentialVoteHistoriesInsert = [];
+        let yearOfVote = new Date(congVote.dateOfVote).getFullYear();
+        let roll = congVote.rollNumber;
+        let xmlFileName = await fetchAndWriteRollCall(yearOfVote, roll);
+        let rollDataClerk = getRollCallDataFromHRClerk(xmlFileName);
+        let {representativesVotesList} = rollDataClerk;
+        
+        // await postgres("roll_call_votes_hr").insert({
+        //     roll : rollDataClerk.roll,
+        //     congressterm : rollDataClerk.congressTerm,
+        //     session : rollDataClerk.session,
+        //     result : rollDataClerk.voteResult,
+        //     crecofvote : congVote.CRECVolumeAndNumber,
+        //     date : rollDataClerk.voteDate,
+        //     issue : rollDataClerk.legislatureNumber,
+        //     question : rollDataClerk.voteQuestion,
+        // }
+        // ).then(res=>{
+        //     console.log("inserted");
+        // }).catch(err=>{
+        //     if(err.code == '23505'){
+        //         console.log("Duplicate key found: ", err.detail);
+        //     }else{
+        //         console.log(err);
+        //     }
+        // })
 
-    // postgres("roll_call_votes_hr").insert({
-    //     roll : rollDataClerk.roll,
-    //     congressterm : rollDataClerk.congressTerm,
-    //     session : rollDataClerk.session,
-    //     result : rollDataClerk.voteResult,
-    //     crecofvote : congVote.CRECVolumeAndNumber,
-    //     date : rollDataClerk.voteDate,
-    //     issue : rollDataClerk.legislatureNumber,
-    //     question : rollDataClerk.voteQuestion,
-    // }
-    // ).then(res=>{
-    //     console.log("inserted");
-    // }).catch(err=>{
-    //     if(err.code == '23505'){
-    //         console.log("Duplicate key found: ", err.detail);
-    //     }else{
-    //         console.log(err);
-    //     }
-    // })
+        let rollString = String(roll);
+        if(rollString.length < 3){
+            rollString = rollString.padStart(3, "0");
+        }
+        let congressTerm = rollDataClerk.congressTerm;
+        let session = rollDataClerk.session;
 
-    let {representativesVotesList} = rollDataClerk;
+        let voteHistoryKey = `${congressTerm}_${session}_${rollString}`;
+        let vote_histories_hr_active_TableEntries = await postgres.select()
+            .from("vote_histories_hr_active")
+            .orderBy("bioguideid");
 
-    let rollString = String(roll);
-    if(rollString.length < 3){
-        roll = rollString.padStart(3, "0");
-    }
-    let congressTerm = rollDataClerk.congressTerm;
-    let session = rollDataClerk.session;
-
-    let voteHistoryKey = `${congressTerm}_${session}_${roll}`;
-    
-
-    //TODO try updating multiple rows and columns at once.
-    //Try finding a way to get postgres.queries() to work with async/await
-    //Get list of entries currently in vote_histories_hr_active
-        //for each roll call vote
-            //for each representative who voted in that roll call
-                //if rep exists in v_h_h_a
-                    //if rep's votinghistory is empty
-                        //create an empty object
-                    //else
-                        //retrieve the json
-                        //check if the voteHistoryKey is already in there
-                            //if so, return
-                    //update votinghistory object  
-    postgres.select()
-        .from("vote_histories_hr_active")
-        .orderBy("bioguideid")
-        .then(vote_histories_hr_active_TableEntries => {
-            let updateList = [];
-            representativesVotesList.forEach( (repObj) => {
-                let isRepresentativeInTable = binarySearchListOfObjects(repObj.bioguideid, vote_histories_hr_active_TableEntries, "bioguideid");
-                
-                if(isRepresentativeInTable !== false){
-                    
-                    let matchedRep = vote_histories_hr_active_TableEntries[isRepresentativeInTable];
-                    if(matchedRep.votinghistory == null){
-                        matchedRep.votinghistory = {};
-                    } else {
-                        let rollVotes = Object.keys(matchedRep.votinghistory);
-                        if(rollVotes.includes(voteHistoryKey)){
-                            console.log(`${voteHistoryKey} already in vote_histories_hr_active for ${matchedRep.bioguideid}`);
-                            return;
-                        }
+        for(let repObj of representativesVotesList){
+            let isRepresentativeInTable = binarySearchListOfObjects(repObj.bioguideid, vote_histories_hr_active_TableEntries, "bioguideid");
+            
+            if(isRepresentativeInTable !== false){                
+                let matchedRep = vote_histories_hr_active_TableEntries[isRepresentativeInTable];
+                if(matchedRep.votinghistory == null){
+                    matchedRep.votinghistory = {};
+                } else {
+                    let rollVotes = Object.keys(matchedRep.votinghistory);
+                    //Skips update if roll call is already present in table for the user
+                    if(rollVotes.includes(voteHistoryKey)){
+                        continue;
                     }
-                    matchedRep.votinghistory[voteHistoryKey] = {voted : repObj.vote};
-                    updateList.push({
-                        bioguideid : repObj.bioguideid,
-                        votinghistory : matchedRep.votinghistory
-                    })
-                    // postgres("vote_histories_hr_active")
-                    //     .where({
-                    //         bioguideid : repObj.bioguideid
-                    //     })
-                    //     .update({
-                    //         votinghistory : matchedRep.votinghistory
-                    //     })
-                    // console.log(`Updated ${updateVoteHistories[0]} with ${voteHistoryKey}`);
-                    
                 }
-            })
-            return updateList;
-        })
-        .then(updateList => {
-            console.log(updateList)
-            updateList.forEach(voteHistoryObj => {
-                postgres("vote_histories_hr_active")
+                matchedRep.votinghistory[voteHistoryKey] = {voted : repObj.vote};
+
+                await postgres("vote_histories_hr_active")
                     .where({
-                        bioguideid : voteHistoryObj.bioguideid
+                        bioguideid : repObj.bioguideid
                     })
                     .update({
-                        votinghistory : voteHistoryObj.votinghistory
+                        votinghistory : matchedRep.votinghistory
                     })
-                    .then(res=>{
-                        // console.log(res)
-                    })
-            })
-        })
-
-        
-    
-    //Select * from vote_histories_hr_active
-    //Search returned list's bioguideid values to see  if member is in there
-    //if yes, check the json keys to see if the voteHistoryKey is already there
-        //if yes, skip
-        //else, add onto the json key
-    //else, add a new entry with bioguideid and vote
-
-    // let check = false;
-    // representativesVotesList.forEach( async (repObj) => {
-    //     let isRepresentativeInTable = binarySearchListOfObjects(repObj.bioguideid, vote_histories_hr_active_TableEntries, "bioguideid");
-        
-    //     if(isRepresentativeInTable !== false){
-    //         if(!check){
-    //             console.log(voteHistoryKey);
-    //             check = true;
-    //         }
-            
-    //         let matchedRep = vote_histories_hr_active_TableEntries[isRepresentativeInTable];
-    //         if(matchedRep.votinghistory == null){
-    //             matchedRep.votinghistory = {};
-    //         } else {
-    //             let rollVotes = Object.keys(matchedRep.votinghistory);
-    //             if(rollVotes.includes(voteHistoryKey)){
-    //                 // console.log(`${voteHistoryKey} already in vote_histories_hr_active for ${matchedRep.bioguideid}`);
-    //                 return;
-    //             }
-    //         }
-    //         matchedRep.votinghistory[voteHistoryKey] = {voted : repObj.vote};
-
-    //         await postgres("vote_histories_hr_active")
-    //             .where({
-    //                 bioguideid : repObj.bioguideid
-    //             })
-    //             .update({
-    //                 votinghistory : matchedRep.votinghistory
-    //             })
-    //         // console.log(`Updated ${updateVoteHistories[0]} with ${voteHistoryKey}`);
-            
-    //     }
-    // })
-
-    //Cannot update multiple entries at a time because update doesn't take arrays
-    
-})
-
-
-let selectVoteHistoriesTableEntries = async (postgres) => {
-    return await (postgres.select()
-        .from("vote_histories_hr_active")
-        .orderBy("bioguideid")
-    )
+            } else {
+                let voteHistoryObj = { voteHistoryKey : {voted : repObj.vote} };
+                potentialVoteHistoriesInsert.push({
+                    bioguideid : repObj.bioguideid,
+                    votinghistory : voteHistoryObj
+                })
+            }
+        }
+        if(potentialVoteHistoriesInsert.length > 0){
+            let dateOfVote = new Date(congVote.dateOfVote);
+            let today = new Date();
+            console.log(potentialVoteHistoriesInsert);
+            // let inserted = await postgres("vote_histories_hr_active",["bioguideid"])
+            //     .insert(potentialVoteHistoriesInsert);
+            // console.log(inserted[0]);
+        }
+    }
 }
 
-let test = async () => {
-    const res = await selectVoteHistoriesTableEntries(postgres);
-    return res;
-}
+updateVoteHistoriesActiveBioGuideIds(postgres)
+// let data = gatherAndUpsertRollCallData(rollCallHRListCREC);
 
+
+//     //Select * from vote_histories_hr_active
+//     //Search returned list's bioguideid values to see  if member is in there
+//     //if yes, check the json keys to see if the voteHistoryKey is already there
+//         //if yes, skip
+//         //else, add onto the json key
+//     //else, add a new entry with bioguideid and vote
 
 let binarySearchListOfObjects = (item, list, listKey) => {
     let beginningIndex = 0;
