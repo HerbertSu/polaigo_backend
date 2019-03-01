@@ -4,7 +4,7 @@
  * @param {*} rollDataClerk Roll Call data object received from getRollCallDataFromHRClerk()
  * @param {*} congVote congVote data object. Is an element in an array outputed from getAllHRRollCallsFromCREC()
  */
-const insertIntoTable_roll_call_votes_hr = async (rollDataClerk, congVote) => {
+const insertIntoTable_roll_call_votes_hr = async (rollDataClerk, congVote, postgres) => {
     await postgres("roll_call_votes_hr").insert({
             roll : rollDataClerk.roll,
             congressterm : rollDataClerk.congressTerm,
@@ -21,7 +21,8 @@ const insertIntoTable_roll_call_votes_hr = async (rollDataClerk, congVote) => {
             if(err.code == '23505'){
                 console.log("Duplicate key found: ", err.detail);
             }else{
-                console.log(err);
+                console.log(err)
+                throw `Could not insert ${congressterm}, ${session}, ${roll} into roll_call_votes_hr.`;
             }
         });
 };

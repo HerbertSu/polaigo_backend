@@ -98,7 +98,6 @@ let rollCallHRListCREC = getAllHRRollCallsFromCREC(votedMeasuresExtensionElement
     //Check if member is in representatives_of_hr_active table. 
         //If so, 
 let gatherAndUpsertRollCallData = async (rollCallHRListCREC, postgres) => {
-    
     for(const congVote of rollCallHRListCREC){
         let potentialVoteHistoriesInsert = [];
         let dateOfVote = new Date(congVote.dateOfVote);
@@ -108,7 +107,7 @@ let gatherAndUpsertRollCallData = async (rollCallHRListCREC, postgres) => {
         let rollDataClerk = getRollCallDataFromHRClerk(xmlFileName);
         let {representativesVotesList} = rollDataClerk;
         
-        insertIntoTable_roll_call_votes_hr(rollDataClerk, congVote);
+        insertIntoTable_roll_call_votes_hr(rollDataClerk, congVote, postgres);
 
         let rollString = String(roll);
         if(rollString.length < 3){
@@ -121,7 +120,10 @@ let gatherAndUpsertRollCallData = async (rollCallHRListCREC, postgres) => {
         let voteHistoryKey = `${congressTerm}_${session}_${rollString}`;
         let vote_histories_hr_active_TableEntries = await postgres.select()
             .from("vote_histories_hr_active")
-            .orderBy("bioguideid");
+            .orderBy("bioguideid")
+            .catch(err => {
+                throw err;
+            });
 
         for(let repObj of representativesVotesList){
             let isRepresentativeInTable = binarySearchListOfObjects(repObj.bioguideid, vote_histories_hr_active_TableEntries, "bioguideid");
@@ -145,18 +147,26 @@ let gatherAndUpsertRollCallData = async (rollCallHRListCREC, postgres) => {
                     .update({
                         votinghistory : matchedRep.votinghistory
                     })
+                    .catch(err =>{
+                        console.log("error at update", err)
+                    })
             } else {
-                let dateOfLastMemberUpdate = await postgres("date_of_last_hr_members_update")
-                    .select()[ACCESS_ARRAY];
-                
-                dateOfLastMemberUpdate = new Date(dateOfLastMemberUpdate);
-                
+                let dateOfLastMemberUpdateFromTable = await postgres("date_of_last_hr_members_update")
+                    .select()
+                    .catch(err => {
+                        throw err;
+                    });
+
+                dateOfLastMemberUpdate = new Date(dateOfLastMemberUpdateFromTable[ACCESS_ARRAY].date);
+
                 if(dateOfVote < dateOfLastMemberUpdate){
-                    console.log(dateOfVote)
-                    console.log(dateOfLastMemberUpdate)
+                    
                     let vote_histories_hr_inactive_TableEntries = await postgres.select()
                         .from("vote_histories_hr_inactive")
-                        .orderBy("bioguideid");
+                        .orderBy("bioguideid")
+                        .catch(err => {
+                            throw err;
+                        });
                     
                     let isRepresentativeInTable = binarySearchListOfObjects(repObj.bioguideid, vote_histories_hr_inactive_TableEntries, "bioguideid");
 
@@ -179,8 +189,12 @@ let gatherAndUpsertRollCallData = async (rollCallHRListCREC, postgres) => {
                             .update({
                                 votinghistory : matchedRep.votinghistory
                             })
+                            .catch(err => {
+                                throw err;
+                            });
                     } else {
-                        let voteHistoryObj = { voteHistoryKey : {voted : repObj.vote} };
+                        let voteHistoryObj = {};
+                        voteHistoryObj[voteHistoryKey] = {voted : repObj.vote};
                         potentialVoteHistoriesInsert.push({
                             bioguideid : repObj.bioguideid,
                             votinghistory : voteHistoryObj
@@ -192,9 +206,11 @@ let gatherAndUpsertRollCallData = async (rollCallHRListCREC, postgres) => {
             }
         }
         if(potentialVoteHistoriesInsert.length > 0){
-            let inserted = await postgres("vote_histories_hr_inactive",["bioguideid"])
-                .insert(potentialVoteHistoriesInsert);
-            console.log(inserted[0]);
+            let inserted = await postgres("vote_histories_hr_inactive")
+                .insert(potentialVoteHistoriesInsert)
+                .catch(err => {
+                    throw err;
+                });
         }
     }
 }
