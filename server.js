@@ -27,6 +27,7 @@ const {
 const {
     gatherAndUpsertRollCallData
 } = require('./scripts/scripts');
+const {fetchCongressionalDistrictFromAddress} = require('./scripts/API/GoogleCivicInfo');
 const {ACCESS_ARRAY} = require("./constants/constants");
 
 const knex = require('knex');
@@ -87,17 +88,20 @@ const postgres = knex({
 //*****
 
 // fetchAndWriteRollCall('2019', '3');
-let relatedItems = CREC.relatedItems;
-let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
-let CRECObj = CREC.CRECObj;
+// let relatedItems = CREC.relatedItems;
+// let votedMeasuresExtensionElements = parseCRECForCongVotes(relatedItems);
+// let CRECObj = CREC.CRECObj;
 
-let rollCallHRListCREC = getAllHRRollCallsFromCREC(votedMeasuresExtensionElements, CRECObj);
+// let rollCallHRListCREC = getAllHRRollCallsFromCREC(votedMeasuresExtensionElements, CRECObj);
 
 
 // updateVoteHistoriesActiveBioGuideIds(postgres)
 // let data = gatherAndUpsertRollCallData(rollCallHRListCREC, postgres);
 
-
+// (async () => {
+//     let district = await fetchCongressionalDistrictFromAddress("50 north illinois street Indianapolis Indiana 46204");
+//     console.log(district);
+// })()
 
 
 
