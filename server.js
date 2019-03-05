@@ -23,6 +23,7 @@ const {
     } = require('./scripts/HR/HR');
 const {
     insertIntoTable_roll_call_votes_hr, 
+    fetchRepresentativeGivenDistrict,
 } = require('./scripts/postgresql/psql');
 const {
     gatherAndUpsertRollCallData
@@ -42,13 +43,13 @@ const postgres = knex({
     }
 });
 
-// TODO: Create a table that maps the representative districts to zipcodes of cities.
+// TODO: Create a table that maps the representative districts to zipcodes of cities. 
 
-// TODO: Add function descriptions (/**) to all functions. 
-
-//TODO Fetch and parse senate roll call votes from (example): 
+// TODO Fetch and parse senate roll call votes from (example): 
     //https://www.senate.gov/legislative/LIS/roll_call_votes/vote1141/vote_114_1_00002.xml
     //but may not be needed as CREC for Senate may be enough.
+
+
 
 //*****For grabbing voted bills/resolutions
 // getDataOfCREC(CREC.CRECObj)
@@ -83,7 +84,7 @@ const postgres = knex({
 
 
 
-//***** For Updating the vote histories 
+//***** For Updating the vote history bioguideids 
 // updateVoteHistoriesActiveBioGuideIds(postgres);
 //*****
 
@@ -98,10 +99,15 @@ const postgres = knex({
 // updateVoteHistoriesActiveBioGuideIds(postgres)
 // let data = gatherAndUpsertRollCallData(rollCallHRListCREC, postgres);
 
+
+//***** For fetching a representative's information given an address
 // (async () => {
 //     let district = await fetchCongressionalDistrictFromAddress("50 north illinois street Indianapolis Indiana 46204");
 //     console.log(district);
+//     let representative = await fetchRepresentativeGivenDistrict(district.state, district.districtNumber, postgres );
+//     console.log(representative);
 // })()
+//*****
 
 
 

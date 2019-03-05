@@ -32,8 +32,10 @@ const fetchCongressionalDistrictFromAddress = async (address) => {
             if(district.length < 2){
                 district = "0" + district;
             }
-
-            return state + district;
+            return {
+                state : String(state),
+                districtNumber : String(district),
+            };
         }
     }
     throw "District not found."

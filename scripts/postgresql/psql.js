@@ -16,7 +16,7 @@ const insertIntoTable_roll_call_votes_hr = async (rollDataClerk, congVote, postg
             question : rollDataClerk.voteQuestion,
         }
         ).then(res=>{
-            console.log("inserted");
+            console.log("Inserted");
         }).catch(err=>{
             if(err.code == '23505'){
                 console.log("Duplicate key found: ", err.detail);
@@ -47,7 +47,32 @@ let upsertQueryRaw = (tableName, columnName, columnListFromSQL, conflict="", act
 }
 
 
+/**
+ * Fetch a representative's information from representatives_of_hr_active.
+ * @param {string} state The two-letter acronym for a state.
+ * @param {string} district A district number.
+ * @param {*} postgres 
+ */
+const fetchRepresentativeGivenDistrict = async (state, district, postgres) => {
+    if(String(district).length < 2){
+        district = '0' + district;
+    };
+    const representative = await postgres("representatives_of_hr_active")
+        .select('bioguideid', 'firstname', 'lastname', 'state', 'party')
+        .where({
+            state : state,
+            district : district
+        })
+        .catch(err => {
+            console.log("Could not fetch representative from representatives_of_hr_active.");
+            throw err;
+        })
+    return representative;
+}
+
+
 module.exports = {
     insertIntoTable_roll_call_votes_hr,
     upsertQueryRaw,
+    fetchRepresentativeGivenDistrict,
 }
