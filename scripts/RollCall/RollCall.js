@@ -25,6 +25,7 @@ let fetchAndWriteRollCall = async (year, roll) => {
             })
         }catch(err){
             console.log(err);
+            throw err;
         }
     }
     return hrClerkRollCallXMLFileName;
