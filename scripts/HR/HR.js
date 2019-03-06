@@ -44,6 +44,11 @@ let fetchAndWriteRepresentativesData = async () => {
 }
 
 
+/**
+ * Converts xml data of currently active representatives of HR into a JS object.
+ * @param {string} xmlFilePath Path to a text document with xml data retrieved from clerk.house.gov/xml/lists/MemberData.xml. fetchAndWriteRepresentativesData() returns such a filepath.
+ * @returns A JS object version of the member xml data.
+ */
 let convertHRMemberXMLToObj = (xmlFilePath) => {
     let xmlMemberData = fs.readFileSync(xmlFilePath);
     let memberObj = {};
@@ -59,13 +64,24 @@ let convertHRMemberXMLToObj = (xmlFilePath) => {
     return memberObj;
 }
 
+
+/**
+ * Returns the date of the member data retrieved from clerk.house.gov/xml/lists/MemberData.xml
+ * @param {Object} representativesObj An object of the members of the House of Representatives. Such an object is returned from convertHRMemberXMLToObj().
+ * @returns A date in the format of yyyy-mm-dd
+ */
 const getDateOfClerksMemberXML = (representativesObj) => {
     let dateOfMemberData = representativesObj.attr["publish-date"];
     return dateify(dateOfMemberData);
 }
 
 
-    
+/**
+ * For each active member returned from clerk.house.gov/xml/lists/MemberData.xml, parse out the desired information such as their bioguide ID, congressional district, name, etc.
+ * If a member is vacant, then their bioguideid field will be marked vacant with 'VAC' + state + district.
+ * @param {Object} representativesObj An object of the members of the House of Representatives. Such an object is returned from convertHRMemberXMLToObj().
+ * @returns A list of objects. Each object contains information about an active representative of the HR: {bioguideid, priorcongress, state, party, firstname, lastname, middlename, district, dateoflastupdate : dateOfMemberData, }
+ */
 let parseHRMemberDataObj = (representativesObj) => {
     let HRMemberList = [];
     
@@ -114,11 +130,12 @@ let parseHRMemberDataObj = (representativesObj) => {
 
 }
 
-/*
--fetchAndWriteRepresentativesData() to get most up-to-date list of representatives.
 
-*/
-
+/**
+ * @todo INCOMPLETE
+ * @param {*} HRMemberList 
+ * @param {*} postgres 
+ */
 let compareActiveRepresentativesForUpdates = (HRMemberList, postgres) => {
     postgres.select()
             .table('representatives_of_hr_active')
@@ -141,9 +158,18 @@ let compareActiveRepresentativesForUpdates = (HRMemberList, postgres) => {
         //compare HRMemberList with the returned data
 
 /**
- * 
- * @param {*} HRMemberList A list returned from parseHRMemberDataObj() containing a list of the current members of the HR retrieved from clerk.house.gov
- * @param {*} dateOfUpdate Date of said member data
+ * Given a list of active HR member data in the form of objects, this function truncates the 'representatives_of_hr_active' and 'date_of_last_hr_members_update' tables and updates both.
+ * @todo Instead of truncating representatives_of_hr_active table every time there's new member data, write a function that compares the new data with the data in the table and change/update accordingly.
+ * pseudo-code logic:
+ * //foreach item in HRMemberList - 
+ * select from reps_of_hr_active table where bioguideid == bioguideid
+ * if exists, update
+ * else, insert
+ * OR
+ * //select * from reps_of_hr_active;
+ * compare HRMemberList with the returned data 
+ * @param {Array} HRMemberList A list returned from parseHRMemberDataObj() containing a list of the current members of the HR retrieved from clerk.house.gov
+ * @param {string} dateOfUpdate Date of said member data in yyyy-mm-dd form. Example input is the result of getDateOfClerksMemberXML().
  * @param {*} postgres 
  */
 let updateRepresentativesActiveTable = (HRMemberList, dateOfUpdate, postgres, ) => {
@@ -186,6 +212,11 @@ let updateRepresentativesActiveTable = (HRMemberList, dateOfUpdate, postgres, ) 
 }   
 
 
+/**
+ * Updates the vote_histories_hr_active table by inserting new members.
+ * @todo The current form of this function only ignores duplicates and adds any bioguideid's that aren't currently in the table. Also needs to add logic that removes old bioguideid's and move their data into vote_histories_hr_inactive if the 'date_of_last_hr_members_update' table's 'date' value is later than the representative's 'dateoflastupdate' column value in the 'representatives_of_hr_active' table.
+ * @param {*} postgres 
+ */
 let updateVoteHistoriesActiveBioGuideIds = (postgres) => {
     let tableName = "vote_histories_hr_active";
     let columnName = "bioguideid";

@@ -1,7 +1,7 @@
 const {ACCESS_ARRAY} =  require('../../constants/constants');
 /**
  * Populates the roll_call_votes_hr table.
- * @param {*} rollDataClerk Roll Call data object received from getRollCallDataFromHRClerk()
+ * @param {Object} rollDataClerk Roll Call data object received from getRollCallDataFromHRClerk()
  * @param {*} congVote congVote data object. Is an element in an array outputed from getAllHRRollCallsFromCREC()
  */
 const insertIntoTable_roll_call_votes_hr = async (rollDataClerk, congVote, postgres) => {
@@ -30,12 +30,13 @@ const insertIntoTable_roll_call_votes_hr = async (rollDataClerk, congVote, postg
 
 
 /**
- * Upserts a single column and its values.
- * @param {*} tableName 
- * @param {*} columnName 
- * @param {*} columnListFromSQL A list of a single column's {column : value} objects returned from a knex SELECT query
- * @param {*} conflict 
- * @param {*} action 
+ * Returns a raw SQL string for upserting a single column and its values.
+ * @param {string} tableName 
+ * @param {string} columnName 
+ * @param {Array} columnListFromSQL A list of a single column's {column : value} objects returned from a knex SELECT query.
+ * @param {string} conflict Specifies the SQL conflict. Can be a column name, a constraint name, or a WHERE statement.
+ * @param {string} action Specifies what to do on conflict. Default action is to do nothing.
+ * @return A raw SQL command as a string.
  */
 let upsertQueryRaw = (tableName, columnName, columnListFromSQL, conflict="", action="DO NOTHING" ) =>{
     let valuesList = columnListFromSQL.map((columnObj)=>{
@@ -52,6 +53,7 @@ let upsertQueryRaw = (tableName, columnName, columnListFromSQL, conflict="", act
  * @param {string} state The two-letter acronym for a state.
  * @param {string} district A district number.
  * @param {*} postgres 
+ * @returns A representative object, if one is found.
  */
 const fetchRepresentativeGivenDistrict = async (state, district, postgres) => {
     if(String(district).length < 2){
