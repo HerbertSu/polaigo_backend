@@ -1,4 +1,4 @@
-
+const {ACCESS_ARRAY} =  require('../../constants/constants');
 /**
  * Populates the roll_call_votes_hr table.
  * @param {*} rollDataClerk Roll Call data object received from getRollCallDataFromHRClerk()
@@ -67,7 +67,7 @@ const fetchRepresentativeGivenDistrict = async (state, district, postgres) => {
             console.log("Could not fetch representative from representatives_of_hr_active.");
             throw err;
         })
-    return representative;
+    return representative[ACCESS_ARRAY];
 }
 
 

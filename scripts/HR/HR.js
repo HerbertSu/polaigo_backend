@@ -3,35 +3,16 @@ const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
 const {upsertQueryRaw} = require('../postgresql/psql');
 const {ACCESS_ARRAY} = require('../../constants/constants');
+const {dateify} = require('../dateify');
 
 //TODO Should I insert/update the representatives_of_hr_active psql table
     //inside the for-loop of parseHRMemberDataObj, or save all of the parsed
     //objects in a list and insert them later as an individual list?
     //Check the options of knex's update()
 
-    /**
-     * 
-     * @param date any date format valid to the Date object
-     * @returns yyyy-mm-dd 
-     */
-let dateify = (date) => {
-    let datified = new Date(date);
-    let dd = datified.getDate();
-    let mm = datified.getMonth() + 1;
-    let yyyy = datified.getFullYear();
-
-    if (dd < 10) {
-        dd = '0' + dd;
-    }
-    
-    if (mm < 10) {
-        mm = '0' + mm;
-    }
-
-    return `${yyyy}-${mm}-${dd}`;
-}
 
 /**
+ * Fetches and writes xml data on the currently active representatives of HR.
  * @returns Filepath to the Member.xml data received from clerk.house.gov
  */
 let fetchAndWriteRepresentativesData = async () => {
@@ -54,6 +35,7 @@ let fetchAndWriteRepresentativesData = async () => {
                 fs.writeFile(hrMemberDataXMLFileName, data, err=>{
                     if(err){
                         console.log(err)
+                        throw err;
                     }
                 })
             }

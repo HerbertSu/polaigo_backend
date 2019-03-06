@@ -5,6 +5,7 @@ const API_KEY = "AIzaSyBPfo8mJJbzcmRTXXupPWGihYotT1hJ2D4";
 /**
  * Fetches and returns the congressional district (e.g. CA11) for a given address. Uses google's Civic Info API.
  * @param {string} address An address written in the form of a US Postal Code.
+ * @returns A congressional district (e.g. CA11).
  */
 const fetchCongressionalDistrictFromAddress = async (address) => {
     let HTTP = `https://www.googleapis.com/civicinfo/v2/representatives/?address=${address}&includeOffices=false&key=${API_KEY}`;
