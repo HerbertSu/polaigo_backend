@@ -1,26 +1,45 @@
 const fs = require('fs');
 const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
+const {dateify} = require('../dateify');
 const {ACCESS_ARRAY} = require('../../constants/constants');
 
 //date format should be a string in yyyy-mm-dd
     //e.g. "2018-12-21"
+
+/**
+ * Fetches and writes a Congressional Record (CREC) in xml format retrieved from govinfo.gov.
+ * Returns the filepath.
+ * @param {string} date Date of the desired CREC. Should be in yyyy-mm-dd format.
+ * @returns A path to the file in which the CREC XML was written into.
+ */
 let fetchCRECXMLFromDate = (date) =>{
-    if(!fs.existsSync(`./test/CREC-${date}.txt`)){
+    date = dateify(date);
+    let filepath = `./test/CREC-${date}.txt`;
+    if(!fs.existsSync(filepath)){
         fetch(`https://api.govinfo.gov/packages/CREC-${date}/mods?api_key=DEMO_KEY`)
             .then(res => res.text())
             .then(fullCR => {
-                fs.writeFile(`./test/CREC-${date}.txt`, fullCR, err=>{
+                fs.writeFile(filepath, fullCR, err=>{
                     if(err){
-                        console.log(err)
+                        console.log(err);
+                        throw err;
                     }
                 })
             })
     }
+    return filepath;
 }
+
 
 //TODO Replace xmlFilePath with the XML string fetched from the govinfo API 
     //for production version.
+/**
+ * Reads in a filepath to the CREC xml data retrieved from and written in fetchCRECXMLFromDate().
+ * Returns the CREC data as an object. Parsing is done with the parseString() function from the 'xml2js' module.
+ * @param {string} xmlFilePath Filepath to the CREC xml file.
+ * @returns The CREC as an Object.
+ */
 let convertCRECXMLToObject = (xmlFilePath) => {
     let xmlCR = fs.readFileSync(xmlFilePath).toString();
     let CRECObj = {};
@@ -33,20 +52,23 @@ let convertCRECXMLToObject = (xmlFilePath) => {
         let mods = result.mods;
         CRECObj = mods;
     })
-
     return CRECObj;
 }
 
-//Each subsection (headings separated by horizontal lines) in the CREC is 
-    //stored/enclosed in a relatedItems element
-//relatedItems --- removed
-//relatedObjects --- renamed to relatedItems
+
+/**
+ * Parses the CREC object returned from convertCRECXMLToObject() for 'relatedItem' key-value pairs.
+ * Returns a list of them. 
+ * Each subsection (headings separated by horizontal lines) in a CREC is stored/enclosed in a 'relatedItem' element
+ * @param {Object} CRECObj CREC object returned from convertCRECXMLToObject().
+ * @returns A list of relatedItem objects.
+ */
 let retrieveCRECSubSections = (CRECObj) =>{
     let CRECObjEntries = Object.entries(CRECObj);
     let relatedItems = [];
     
     for(let i = 0; i < CRECObjEntries.length; i++){
-        if(CRECObjEntries[i][0] === 'relatedItem'){
+        if(CRECObjEntries[i][ACCESS_ARRAY] === 'relatedItem'){
             relatedItems = CRECObjEntries[i][1];
             break;
         }
@@ -55,8 +77,13 @@ let retrieveCRECSubSections = (CRECObj) =>{
 }
 
 
-//Grabbing the items the daily digest items from the cumulative CREC and
-    //storing them in arrays
+
+/**
+ * Given a list of relatedItem objects from retrieveCRECSubSections(), this function parses them for Daily Digest items, and returns a list of lists.
+ * The returning array is length two. Each element is another array.
+ * @param {Array} relatedItems List of relatedItem objects returned from retrieveCRECSubSections().
+ * @returns The first element (index 0) is a list of the unique daily digest page IDs found in the given CREC. Some digital digest objects may contain duplicate IDs, which mean the information related to it show up on the same page of the Daily Digest as another item. These can be used to search for the daily digest summaries in govinfo.gov. The second element (index 1) is a list of the unique relatedItem objects. (No duplicate ones with the same page IDs).
+ */
 let parseCRECForDailyDigest = (relatedItems) => {
     let dailyDigestIDs = [];
     let dailyDigestContainers = [];
@@ -79,11 +106,18 @@ let parseCRECForDailyDigest = (relatedItems) => {
 
     if(dailyDigestIDs.length > 0 && dailyDigestContainers.length > 0){
         return [dailyDigestIDs, dailyDigestContainers];
+    } else {
+        console.log("No Daily Digest IDs found.");
+        throw "No Daily Digest IDs found";
     }
 }
 
 
-//Retrieve the html links for all of the daily digest pages referrenced
+/**
+ *Retrieves the HTML links from all of the daily digest pages referenced in parseCRECForDailyDigest() and returns them in a list.
+ * @param {Array} dailyDigestContainers A list of relatedItem objects returned from parseCRECForDailyDigest()[1].
+ * @returns List of HTML links to Daily Digest pages.
+ */
 let parseDailyDigestForHTMLLinks = (dailyDigestContainers) => {
     let dailyDigestHTMLLinks = [];
     dailyDigestContainers.forEach( dailyDigestAttributeObject => {
@@ -101,6 +135,11 @@ let parseDailyDigestForHTMLLinks = (dailyDigestContainers) => {
 }
 
 
+/**
+ * Parses a list of relatedItem objects returned from retrieveCRECSubSections() for any relatedItem objects that contains congressional votess (congVote).
+ * @param {Array} relatedItems List of relatedItem objects returned from retrieveCRECSubSections().
+ * @returns List of relatedItem objects containing congVote objects.
+ */
 let parseCRECForRelatedItemsWithCongVotes = (relatedItems) => {
     let relatedItemsWithCongVotesList = [];
     for(let item = 0; item < relatedItems.length; item++){
@@ -113,11 +152,22 @@ let parseCRECForRelatedItemsWithCongVotes = (relatedItems) => {
     return relatedItemsWithCongVotesList;
 }
 
+
+/**
+ * A function that specifically deals with objects with array values. Returns the last index of an array that is also a value within an object.
+ * @param {Object} objectName 
+ * @param {string} arrayName Key to the array value.
+ * @returns Returns the last index of an array that is also a value within an object.
+ */
 let getObjectArrayIndex = (objectName, arrayName) => {
     return objectName[arrayName].length - 1;
 }
 
 
+/**
+ * A curried function for creating an object containing lists of measures that were voted on in a CREC by the Senate or House of Representatives.
+ * @param {Object} relatedItemsEntry An relatedItem object. Also an element of the list of relatedItem's returned from retrieveCRECSubSections().
+ */
 let populateVotedMeasuresObjCurried = (relatedItemsEntry) => (votedMeasuresObj) =>{
     
     let rollCallList = [];
@@ -128,19 +178,32 @@ let populateVotedMeasuresObjCurried = (relatedItemsEntry) => (votedMeasuresObj) 
     }
 
     if(votedMeasuresObj.votedMeasures == undefined){
-        votedMeasuresObj["votedMeasures"] = [relatedItemsEntry.extension[0]];
+        votedMeasuresObj["votedMeasures"] = [relatedItemsEntry.extension[ACCESS_ARRAY]];
     } else {
-        votedMeasuresObj.votedMeasures.push(relatedItemsEntry.extension[0]);
+        votedMeasuresObj.votedMeasures.push(relatedItemsEntry.extension[ACCESS_ARRAY]);
     }
 
     //Add list of associated roll calls to the object
     votedMeasuresObj.votedMeasures[getObjectArrayIndex(votedMeasuresObj, "votedMeasures")]["rollCalls"] = rollCallList;
 }
 
+
+
+/**
+ * Checks if an object is empty.
+ * @param {Object} object 
+ * @returns boolean.
+ */
 let isObjectEmpty = (object) => {
     return Object.keys(object).length === 0 && object.constructor === Object;
 }
 
+
+/**
+ * Implants the roll call data of a congVote (located outside of the congVote object) into the congVote object by creating a new key-value pair entry.
+ * UNNECESSARY, as congVote objects have an attr entry "number" that includes the number of the rollc all.
+ * @param {Array} listOfVotedMeasuresObjects List of 'extension' objects (ie objects that contain 'congVote' objects). 'extension' objects are contained within 'relatedItem' objects.
+ */
 let matchRollCallsWithCongVotes = (listOfVotedMeasuresObjects) => {
     if(listOfVotedMeasuresObjects.length > 0){
         listOfVotedMeasuresObjects.forEach( extensionObj => {
@@ -154,6 +217,12 @@ let matchRollCallsWithCongVotes = (listOfVotedMeasuresObjects) => {
     }
 }
 
+/**
+ * Parses a CREC's related items for ones with 'congVote' objects and returns an object with the measures the Senate voted on and ones the House voted on that were recorded in the CREC.
+ * A congVote object, if it exists in a relatedItem object, lives two levels deep inside the relatedItem object. In between the two is the 'extension' object. This function returns lists of extension objects.
+ * @param {Array} relatedItemsRaw List of relatedItem objects returned from retrieveCRECSubSections().
+ * @returns Object returned: { senateVotedMeasuresObj, hrVotedMeasuresObj }.
+ */
 let parseCRECForCongVotes = (relatedItemsRaw) => {
     let hrVotedMeasuresObj = {};
     let senateVotedMeasuresObj = {};
@@ -161,10 +230,10 @@ let parseCRECForCongVotes = (relatedItemsRaw) => {
     let relatedItems = parseCRECForRelatedItemsWithCongVotes(relatedItemsRaw);
     
     for(let item = 0; item < relatedItems.length; item++){
-        if(relatedItems[item].extension[0].granuleClass[0] == "SENATE"){
-            populateVotedMeasuresObjCurried(relatedItems[item])(senateVotedMeasuresObj);
-        }else if(relatedItems[item].extension[0].granuleClass[0] == "HOUSE"){
+        if(relatedItems[item].extension[ACCESS_ARRAY].granuleClass[ACCESS_ARRAY] == "HOUSE"){
             populateVotedMeasuresObjCurried(relatedItems[item])(hrVotedMeasuresObj);
+        }else if(relatedItems[item].extension[0].granuleClass[ACCESS_ARRAY] == "SENATE"){
+            populateVotedMeasuresObjCurried(relatedItems[item])(senateVotedMeasuresObj);
         }
     }
 
@@ -182,6 +251,12 @@ let parseCRECForCongVotes = (relatedItemsRaw) => {
     };
 };
 
+
+/**
+ * Every CREC contains meta-data about it. This function returns the CREC's volumne and number, its congressional term, and it's session.
+ * @param {Object} CRECObj CREC object returned from convertCRECXMLToObject().
+ * @returns Object: { CRECVolumeAndNumber, congressionalTermCREC, sessionCREC }
+ */
 let getDataOfCREC = (CRECObj) => {
     let CRECVolumeAndNumber = CRECObj.titleInfo[ACCESS_ARRAY].partNumber[ACCESS_ARRAY];
     let congressionalTermCREC = "";
@@ -203,8 +278,13 @@ let getDataOfCREC = (CRECObj) => {
     }
 }
 
-// Returns a customized object containing a list of objects. Each object is a roll call recorded
-    //in the CREC.
+
+/**
+ * Returns a list of objects. Each object is a roll call recorded in the CREC.
+ * @param {Array} votedMeasuresExtensionElements A votedMeasures key from parseCRECForCongVotes().hrVotedMeasuresObj.votedMeasures
+ * @param {Array} CRECObj A CREC in object form convertCRECXMLToObject().
+ * @returns List of objects containing information regarding the different HR roll call votes that occurred in a given CREC.
+ */
 let getAllHRRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
     let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CRECObj);
     let listOfCRECCongVotes = [];
@@ -231,6 +311,13 @@ let getAllHRRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
     return listOfCRECCongVotes
 }
 
+
+/**
+ * Returns a list of objects. Each object is a roll call recorded in the CREC.
+ * @param {Array} votedMeasuresExtensionElements A votedMeasures key from parseCRECForCongVotes().senateVotedMeasuresObj.votedMeasures
+ * @param {Array} CRECObj A CREC in object form convertCRECXMLToObject().
+ * @returns List of objects containing information regarding the different HR roll call votes that occurred in a given CREC.
+ */
 let getAllSenateRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
     let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CRECObj);
     let listOfCRECCongVotes = [];

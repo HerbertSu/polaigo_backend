@@ -3,6 +3,12 @@ const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
 const {ACCESS_ARRAY} = require('../../constants/constants');
 
+/**
+ * Fetch and write xml data for a specific House of Representatives roll call from clerk.house.gov.
+ * @param {string} year yyyy
+ * @param {string} roll Roll number for that year/session of Congress.
+ * @returns Filepath string to the xml data that was fetched.
+ */
 let fetchAndWriteRollCall = async (year, roll) => {
     let rollString = String(roll);
     if(rollString.length < 3){
@@ -32,7 +38,11 @@ let fetchAndWriteRollCall = async (year, roll) => {
 }
 
 
-
+/**
+ * Converts xml data on a HR Roll Call vote into a JS object.
+ * @param {string} xmlFilepath Filepath to XML data. Example is the return value of fetchAndWriteRollCall().
+ * @returns A Roll Call vote data in the form of a JS object.
+ */
 let convertRollCallXMLToObject = (xmlFilepath) => {
     let xmlRollCall = fs.readFileSync(xmlFilepath).toString();
     let rollCallObj = {};
@@ -47,6 +57,23 @@ let convertRollCallXMLToObject = (xmlFilepath) => {
     return rollCallObj;
 }
     
+/**
+ * Parses an xml file with data on a specific HR roll call vote and returns an object with various information.
+ * @param {string} xmlFilePath Filepath to XML data. Example is the return value of fetchAndWriteRollCall().
+ * @returns A customized object with specific data from the desired Roll Call. Object looks like: {
+ * congressTerm,
+ * session,
+ * chamber,
+ * roll,
+ * legislatureNumber,
+ * voteQuestion,
+ * voteResult,
+ * voteDate,
+ * voteTime,
+ * voteDescription,
+ * representativesVotesList
+ * }
+ */
 let getRollCallDataFromHRClerk = (xmlFilePath) => {
     let rollCallObj = convertRollCallXMLToObject(xmlFilePath);
     let voteMetaData = rollCallObj["vote-metadata"];
@@ -105,7 +132,6 @@ let getRollCallDataFromHRClerk = (xmlFilePath) => {
         voteTime,
         voteDescription,
         representativesVotesList,
-    
     };
 }
 
