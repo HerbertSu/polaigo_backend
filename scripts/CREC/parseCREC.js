@@ -2,6 +2,7 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
 const {dateify} = require('../dateify');
+const {isObjectEmpty} = require('../isObjectEmpty');
 const {ACCESS_ARRAY} = require('../../constants/constants');
 
 //date format should be a string in yyyy-mm-dd
@@ -190,17 +191,6 @@ let populateVotedMeasuresObjCurried = (relatedItemsEntry) => (votedMeasuresObj) 
 }
 
 
-
-/**
- * Checks if an object is empty.
- * @param {Object} object 
- * @returns boolean.
- */
-let isObjectEmpty = (object) => {
-    return Object.keys(object).length === 0 && object.constructor === Object;
-}
-
-
 /**
  * Implants the roll call data of a congVote (located outside of the congVote object) into the congVote object by creating a new key-value pair entry.
  * UNNECESSARY, as congVote objects have an attr entry "number" that includes the number of the rollc all.
@@ -291,26 +281,30 @@ let getAllHRRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
     let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CRECObj);
     let listOfCRECCongVotes = [];
 
-    votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
-        let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
-        let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
-        let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
-        voteExtensionObj.congVote.forEach((voteObj) => {
-            let rollNumber = voteObj.attr.number;
-            // delete voteObj.congMember;
-            listOfCRECCongVotes.push({
-                CRECVolumeAndNumber,
-                congressionalTermCREC,
-                sessionCREC,
-                chamber,
-                dateOfVote,
-                timeOfVote,
-                rollNumber,
-                ...voteObj,
+    if(!isObjectEmpty(votedMeasuresExtensionElements.hrVotedMeasuresObj)){
+        votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
+            let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
+            let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
+            let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
+            voteExtensionObj.congVote.forEach((voteObj) => {
+                let rollNumber = voteObj.attr.number;
+                // delete voteObj.congMember;
+                listOfCRECCongVotes.push({
+                    CRECVolumeAndNumber,
+                    congressionalTermCREC,
+                    sessionCREC,
+                    chamber,
+                    dateOfVote,
+                    timeOfVote,
+                    rollNumber,
+                    ...voteObj,
+                })
             })
         })
-    })
-    return listOfCRECCongVotes
+        return listOfCRECCongVotes
+    }else{
+        return "hrVotedMeasuresObj is empty.";
+    }
 }
 
 
@@ -321,35 +315,40 @@ let getAllHRRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
  * @returns List of objects containing information regarding the different HR roll call votes that occurred in a given CREC.
  */
 let getAllSenateRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
+
     let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CRECObj);
     let listOfCRECCongVotes = [];
 
-    votedMeasuresExtensionElements.senateVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
-        let dateOfVote = undefined;
-        if(voteExtensionObj.granuleDate[ACCESS_ARRAY] != undefined){
-            dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
-        }
-        
-        let chamber = undefined;
-        if(voteExtensionObj.chamber[ACCESS_ARRAY] != undefined){
-            chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
-        }
+    if(!isObjectEmpty(votedMeasuresExtensionElements.senateVotedMeasuresObj)){
+        votedMeasuresExtensionElements.senateVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
+            let dateOfVote = undefined;
+            if(voteExtensionObj.granuleDate[ACCESS_ARRAY] != undefined){
+                dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
+            }
+            
+            let chamber = undefined;
+            if(voteExtensionObj.chamber[ACCESS_ARRAY] != undefined){
+                chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
+            }
 
-        voteExtensionObj.congVote.forEach((voteObj) => {
-            let rollNumber = voteObj.attr.number;
-            // delete voteObj.congMember;
-            listOfCRECCongVotes.push({
-                CRECVolumeAndNumber,
-                congressionalTermCREC,
-                sessionCREC,
-                chamber,
-                dateOfVote,
-                rollNumber,
-                ...voteObj,
+            voteExtensionObj.congVote.forEach((voteObj) => {
+                let rollNumber = voteObj.attr.number;
+                // delete voteObj.congMember;
+                listOfCRECCongVotes.push({
+                    CRECVolumeAndNumber,
+                    congressionalTermCREC,
+                    sessionCREC,
+                    chamber,
+                    dateOfVote,
+                    rollNumber,
+                    ...voteObj,
+                })
             })
         })
-    })
-    return listOfCRECCongVotes
+        return listOfCRECCongVotes
+    }else{
+        return "senateVotedMeasuresObj is empty.";
+    }   
 }
 
 

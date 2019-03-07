@@ -16,7 +16,7 @@ const insertIntoTable_roll_call_votes_hr = async (rollDataClerk, congVote, postg
             question : rollDataClerk.voteQuestion,
         }
         ).then(res=>{
-            console.log("Inserted");
+            console.log(`Inserted ${congressTerm}-${session}-${rollDataClerk.roll} into roll_call_votes_hr table.`);
         }).catch(err=>{
             if(err.code == '23505'){
                 console.log("Duplicate key found: ", err.detail);
