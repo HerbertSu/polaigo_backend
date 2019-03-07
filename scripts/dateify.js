@@ -4,16 +4,19 @@
  * @returns yyyy-mm-dd 
  */
 let dateify = (date) => {
-    let datified = new Date(date);
+    let dateObject = new Date(date);
+    let offset = dateObject.getTimezoneOffset();
+    let utc = dateObject.getTime() + offset*60*1000;
+    let datified = new Date(utc);
     
     if( isNaN(datified) ){
         console.log("Invalid date entered into dateify.");
         throw "Invalid date entered into dateify.";
     }
 
-    let dd = datified.getDate();
-    let mm = datified.getMonth() + 1;
-    let yyyy = datified.getFullYear();
+    let dd = parseInt(datified.getDate());
+    let mm = parseInt(datified.getMonth() + 1);
+    let yyyy = parseInt(datified.getFullYear());
 
     if (dd < 10) {
         dd = '0' + dd;
