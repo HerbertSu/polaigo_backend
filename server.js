@@ -31,6 +31,9 @@ const {
 const {fetchCongressionalDistrictFromAddress} = require('./scripts/API/GoogleCivicInfo');
 const {ACCESS_ARRAY} = require("./constants/constants");
 
+const {dateify} = require('./scripts/dateify');
+const { fetchAndUpdateDBGivenDate } = require('./scripts/fetchAndUpdateDBGivenDate');
+
 const knex = require('knex');
 
 const postgres = knex({
@@ -109,6 +112,9 @@ const postgres = knex({
 // })()
 //*****
 
+(async ()=> {
+    console.log( await fetchAndUpdateDBGivenDate("Dec 21, 2018"));
+})()
 
 
 
