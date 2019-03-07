@@ -3,6 +3,9 @@
   * Remove API key for Google Civic Info API and use a service account's instead. [Posted 3/1/2019].
   * Set API keys to environment variables. [Posted 3/1/2019].
   * The current form of updateVoteHistoriesActiveBioGuideIds() only ignores duplicates and adds any bioguideid's that aren't currently in the table. Need to add logic that removes old bioguideid's and move their data into vote_histories_hr_inactive if the 'date_of_last_hr_members_update' table's 'date' value is later than the representative's 'dateoflastupdate' column value in the 'representatives_of_hr_active' table. [Posted 3/6/2019].
+  * Find a way to fetch Senate roll call votes. Perhaps use list provided by CREC. Another possible source is https://www.senate.gov/legislative/LIS/roll_call_votes/vote1141/vote_114_1_00002.xml
+  but may prove to be unusable due to legal reasons [Posted 3/7/2019].
+  * Find a way to fetch currently active Senators. Perhaps use list provided by CREC. [Posted 3/7/2019].
   
 
 

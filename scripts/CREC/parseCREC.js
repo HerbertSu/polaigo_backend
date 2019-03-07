@@ -2,6 +2,7 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
 const {dateify} = require('../dateify');
+const {isObjectEmpty} = require('../isObjectEmpty');
 const {ACCESS_ARRAY} = require('../../constants/constants');
 
 //date format should be a string in yyyy-mm-dd
@@ -13,20 +14,22 @@ const {ACCESS_ARRAY} = require('../../constants/constants');
  * @param {string} date Date of the desired CREC. Should be in yyyy-mm-dd format.
  * @returns A path to the file in which the CREC XML was written into.
  */
-let fetchCRECXMLFromDate = (date) =>{
+let fetchAndWriteCRECXMLFromDate = async (date) =>{
     date = dateify(date);
     let filepath = `./test/CREC-${date}.txt`;
     if(!fs.existsSync(filepath)){
-        fetch(`https://api.govinfo.gov/packages/CREC-${date}/mods?api_key=DEMO_KEY`)
-            .then(res => res.text())
-            .then(fullCR => {
-                fs.writeFile(filepath, fullCR, err=>{
-                    if(err){
-                        console.log(err);
-                        throw err;
-                    }
-                })
+        try{
+            let res = await fetch(`https://api.govinfo.gov/packages/CREC-${date}/mods?api_key=DEMO_KEY`);
+            let text = await res.text();
+            fs.writeFileSync(filepath, text, err=>{
+                if(err){
+                    console.log(err);
+                    throw err;
+                }
             })
+        }catch(err){
+            throw err;
+        }
     }
     return filepath;
 }
@@ -188,17 +191,6 @@ let populateVotedMeasuresObjCurried = (relatedItemsEntry) => (votedMeasuresObj) 
 }
 
 
-
-/**
- * Checks if an object is empty.
- * @param {Object} object 
- * @returns boolean.
- */
-let isObjectEmpty = (object) => {
-    return Object.keys(object).length === 0 && object.constructor === Object;
-}
-
-
 /**
  * Implants the roll call data of a congVote (located outside of the congVote object) into the congVote object by creating a new key-value pair entry.
  * UNNECESSARY, as congVote objects have an attr entry "number" that includes the number of the rollc all.
@@ -281,7 +273,7 @@ let getDataOfCREC = (CRECObj) => {
 
 /**
  * Returns a list of objects. Each object is a roll call recorded in the CREC.
- * @param {Array} votedMeasuresExtensionElements A votedMeasures key from parseCRECForCongVotes().hrVotedMeasuresObj.votedMeasures
+ * @param {Array} votedMeasuresExtensionElements The object returned from parseCRECForCongVotes()
  * @param {Array} CRECObj A CREC in object form convertCRECXMLToObject().
  * @returns List of objects containing information regarding the different HR roll call votes that occurred in a given CREC.
  */
@@ -289,59 +281,74 @@ let getAllHRRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
     let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CRECObj);
     let listOfCRECCongVotes = [];
 
-    votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
-        let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
-        let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
-        let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
-        voteExtensionObj.congVote.forEach((voteObj) => {
-            let rollNumber = voteObj.attr.number;
-            // delete voteObj.congMember;
-            listOfCRECCongVotes.push({
-                CRECVolumeAndNumber,
-                congressionalTermCREC,
-                sessionCREC,
-                chamber,
-                dateOfVote,
-                timeOfVote,
-                rollNumber,
-                ...voteObj,
+    if(!isObjectEmpty(votedMeasuresExtensionElements.hrVotedMeasuresObj)){
+        votedMeasuresExtensionElements.hrVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
+            let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
+            let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
+            let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
+            voteExtensionObj.congVote.forEach((voteObj) => {
+                let rollNumber = voteObj.attr.number;
+                // delete voteObj.congMember;
+                listOfCRECCongVotes.push({
+                    CRECVolumeAndNumber,
+                    congressionalTermCREC,
+                    sessionCREC,
+                    chamber,
+                    dateOfVote,
+                    timeOfVote,
+                    rollNumber,
+                    ...voteObj,
+                })
             })
         })
-    })
-    return listOfCRECCongVotes
+        return listOfCRECCongVotes
+    }else{
+        return "hrVotedMeasuresObj is empty.";
+    }
 }
 
 
 /**
  * Returns a list of objects. Each object is a roll call recorded in the CREC.
- * @param {Array} votedMeasuresExtensionElements A votedMeasures key from parseCRECForCongVotes().senateVotedMeasuresObj.votedMeasures
+ * @param {Array} votedMeasuresExtensionElements The object returned from parseCRECForCongVotes()
  * @param {Array} CRECObj A CREC in object form convertCRECXMLToObject().
  * @returns List of objects containing information regarding the different HR roll call votes that occurred in a given CREC.
  */
 let getAllSenateRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) => {
+
     let {CRECVolumeAndNumber, congressionalTermCREC, sessionCREC} = getDataOfCREC(CRECObj);
     let listOfCRECCongVotes = [];
 
-    votedMeasuresExtensionElements.senateVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
-        let dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
-        let chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
-        let timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
-        voteExtensionObj.congVote.forEach((voteObj) => {
-            let rollNumber = voteObj.attr.number;
-            // delete voteObj.congMember;
-            listOfCRECCongVotes.push({
-                CRECVolumeAndNumber,
-                congressionalTermCREC,
-                sessionCREC,
-                chamber,
-                dateOfVote,
-                timeOfVote,
-                rollNumber,
-                ...voteObj,
+    if(!isObjectEmpty(votedMeasuresExtensionElements.senateVotedMeasuresObj)){
+        votedMeasuresExtensionElements.senateVotedMeasuresObj.votedMeasures.forEach((voteExtensionObj) => {
+            let dateOfVote = undefined;
+            if(voteExtensionObj.granuleDate[ACCESS_ARRAY] != undefined){
+                dateOfVote = voteExtensionObj.granuleDate[ACCESS_ARRAY];
+            }
+            
+            let chamber = undefined;
+            if(voteExtensionObj.chamber[ACCESS_ARRAY] != undefined){
+                chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
+            }
+
+            voteExtensionObj.congVote.forEach((voteObj) => {
+                let rollNumber = voteObj.attr.number;
+                // delete voteObj.congMember;
+                listOfCRECCongVotes.push({
+                    CRECVolumeAndNumber,
+                    congressionalTermCREC,
+                    sessionCREC,
+                    chamber,
+                    dateOfVote,
+                    rollNumber,
+                    ...voteObj,
+                })
             })
         })
-    })
-    return listOfCRECCongVotes
+        return listOfCRECCongVotes
+    }else{
+        return "senateVotedMeasuresObj is empty.";
+    }   
 }
 
 
@@ -351,7 +358,7 @@ module.exports = {
     parseCRECForDailyDigest : parseCRECForDailyDigest,
     parseDailyDigestForHTMLLinks : parseDailyDigestForHTMLLinks,
     parseCRECForCongVotes : parseCRECForCongVotes,
-    fetchCRECXMLFromDate : fetchCRECXMLFromDate,
+    fetchAndWriteCRECXMLFromDate : fetchAndWriteCRECXMLFromDate,
     parseCRECForRelatedItemsWithCongVotes : parseCRECForRelatedItemsWithCongVotes,
     isObjectEmpty : isObjectEmpty,
     getDataOfCREC, 
