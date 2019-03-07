@@ -335,11 +335,6 @@ let getAllSenateRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) =>
             chamber = voteExtensionObj.chamber[ACCESS_ARRAY];
         }
 
-        // let timeOfVote = undefined;
-        // if(voteExtensionObj.time[ACCESS_ARRAY].attr != undefined){
-        //     timeOfVote = voteExtensionObj.time[ACCESS_ARRAY].attr;
-        // }
-        
         voteExtensionObj.congVote.forEach((voteObj) => {
             let rollNumber = voteObj.attr.number;
             // delete voteObj.congMember;
@@ -349,7 +344,6 @@ let getAllSenateRollCallsFromCREC = (votedMeasuresExtensionElements, CRECObj) =>
                 sessionCREC,
                 chamber,
                 dateOfVote,
-                // timeOfVote,
                 rollNumber,
                 ...voteObj,
             })
