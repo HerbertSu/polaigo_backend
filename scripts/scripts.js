@@ -129,6 +129,9 @@ let gatherAndUpsertRollCallData = async (rollCallHRListCREC, postgres) => {
         if(potentialVoteHistoriesInsert.length > 0){
             let inserted = await postgres("vote_histories_hr_inactive")
                 .insert(potentialVoteHistoriesInsert)
+                .then(res => {
+                    console.log("Inserted into vote_histories_hr_inactive");
+                })
                 .catch(err => {
                     throw err;
                 });
