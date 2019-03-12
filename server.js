@@ -1,5 +1,8 @@
 const express = require('express');
-const app = express();
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const knex = require('knex');
+
 const {
     convertHRMemberXMLToObj, 
     parseHRMemberDataObj,
@@ -13,7 +16,12 @@ const {fetchCongressionalDistrictFromAddress} = require('./scripts/API/GoogleCiv
 const {dateify} = require('./scripts/dateify');
 const {fetchAndUpdateDBGivenDate} = require('./scripts/fetchAndUpdateDBGivenDate');
 
-const knex = require('knex');
+const app = express(); 
+
+app.use(cors());
+app.use(bodyParser());
+
+const PORT = 3000;
 
 const postgres = knex({
     client: 'pg',
@@ -25,6 +33,26 @@ const postgres = knex({
     }
 });
 
+app.get('/getRepresentativesFromLocation', async (request, response) => {
+
+    try{
+        const {addressLine1, addressLine2, city, state, zipCode} = request.body;
+
+        let address = `${addressLine1} ${addressLine2}, ${city}, ${state} ${zipCode}`;
+        let district = await fetchCongressionalDistrictFromAddress(address);
+        let representative = await fetchRepresentativeGivenDistrict(district.state, district.districtNumber, postgres );
+
+        response.send(representative)
+
+    }catch(err){
+
+        response.status(404).send({
+            "error" : err,
+            "message" : "Could not fetch representative for given address. Please check input address"
+        });
+    }
+    
+})
 
 //***** For populating representatives_of_hr_active table
 // ( async () => {
@@ -58,11 +86,6 @@ const postgres = knex({
 
 
 
-
-
-
-
-
-
-
-
+app.listen(PORT, ()=> {
+    console.log(`App is running on port ${PORT}.`);
+  });
