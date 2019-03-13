@@ -33,7 +33,7 @@ const postgres = knex({
     }
 });
 
-app.get('/getRepresentativesFromLocation', async (request, response) => {
+app.post('/getRepresentativesFromLocation', async (request, response) => {
 
     try{
         const {addressLine1, addressLine2, city, state, zipCode} = request.body;
