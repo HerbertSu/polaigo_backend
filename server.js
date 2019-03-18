@@ -81,7 +81,7 @@ app.post('/get-hr-rep-vote-history-active-full', async (request, response) => {
             'question'
         )
         .whereIn(['congressterm', 'session', 'roll'], congressterm_session_roll_Array)
-        .orderBy([{column :'congressterm', order : 'desc'}, {column : 'session', order : 'desc'}, {column : 'roll', order : 'desc'}]);
+        .orderByRaw('congressterm::int DESC, session::int DESC, roll::int DESC');
 
     let representativeVoteObjectArray = selectedRollCallVotes.map((rollCallObj) => {
         rollCallObj.roll = String(parseInt(rollCallObj.roll));
