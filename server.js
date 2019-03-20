@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const knex = require('knex');
+const bcrypt = require('bcrypt');
 
 const {
     convertHRMemberXMLToObj, 
@@ -35,6 +36,75 @@ const postgres = knex({
     }
 });
 
+
+app.post('/createUser', async (request, response) => {
+    const user = request.body;
+
+    await bcrypt.hash(user.password, 0, (err, hash) => {
+        postgres.transaction(trx => {
+            trx.table("users")
+                .returning("id")
+                .insert({
+                    username : user.username,
+                    firstname : user.firstname,
+                    lastname : user.lastname,
+                    middlename : user.middlename,
+                    email : user.email
+                })
+                .catch(error=> {
+                    throw error;
+                })
+                .then((id) => {
+                    return trx("hash")
+                        .insert({
+                            id : parseInt(id),
+                            hash : hash
+                        })
+                        .catch(error => {
+                            throw error;
+                        });
+                })
+            .then(trx.commit)
+            .then(()=>{
+                response.send("New user has been created.");
+            })
+            .catch(err => {
+                console.log(err);
+                trx.rollback;
+                response.status(500).send("Could not create new user.")
+                throw err;
+                
+            });
+        });
+    });
+
+})
+
+app.post('/login', async (request, response) => {
+    
+    const {username, password} = request.body;
+
+    try{
+        const idObj = await postgres('users')
+            .first('id')
+            .where('username', username)
+            
+
+        const hashObj = await postgres('hash')
+            .first('hash')
+            .where('id', parseInt(idObj.id))
+
+        bcrypt.compare(password, hashObj.hash, (err, result) => {
+            if(result){
+                response.status(200).send("Welcome!");
+            }else{
+                response.status(504).send("Incorrect username or password.");
+            };
+        })
+    }catch(error){
+        response.status(504).send("Incorrect username or password.");
+    };
+});
 
 app.post('/get-hr-rep-vote-history-active-full', async (request, response) => {
     const {bioguideid} = request.body;
@@ -101,9 +171,8 @@ app.post('/get-hr-rep-vote-history-active-full', async (request, response) => {
             ...match[1]
         };
     });
-
-    response.send(representativeVoteObjectArray)
-})
+    response.send(representativeVoteObjectArray);
+});
 
 app.post('/get-representatives-from-location', async (request, response) => {
 
@@ -122,9 +191,8 @@ app.post('/get-representatives-from-location', async (request, response) => {
             "error" : err,
             "message" : "Could not fetch representative for given address. Please check input address"
         });
-    }
-    
-})
+    };
+});
 
 //***** For populating representatives_of_hr_active table
 // ( async () => {
