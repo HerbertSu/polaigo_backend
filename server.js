@@ -186,10 +186,9 @@ app.post('/get-representatives-from-location', async (request, response) => {
         response.send(representative)
 
     }catch(err){
-
         response.status(404).send({
-            "error" : err,
-            "message" : "Could not fetch representative for given address. Please check input address"
+            "error" : "Invalid address",
+            "message" : `Could not fetch representative for given address. Please check input address. ${err}`
         });
     };
 });
