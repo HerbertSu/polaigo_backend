@@ -1,6 +1,22 @@
 //Create database
 CREATE DATABASE polaigo_test;
 
+//Create users table
+CREATE TABLE IF NOT EXISTS users(
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(15) NOT NULL UNIQUE,
+    firstname VARCHAR(255),
+    lastname VARCHAR(255),
+    middlename VARCHAR(255),
+    email VARCHAR(255)
+);
+
+//Creates hash table
+CREATE TABLE IF NOT EXISTS hash(
+    id INTEGER PRIMARY KEY,
+    hash VARCHAR NOT NULL
+);
+
 //Create bills_and_resolutions table
 CREATE TABLE IF NOT EXISTS bills_and_resolutions(
     type VARCHAR(7),
@@ -54,6 +70,7 @@ CREATE TABLE IF NOT EXISTS senators_of_senate_active(
     middleName VARCHAR,
     dateOfLastUpdate DATE 
 );
+
 
 //Create roll_call_votes_hr table
 CREATE TABLE IF NOT EXISTS roll_call_votes_hr(
