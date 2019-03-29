@@ -36,6 +36,9 @@ const postgres = knex({
     }
 });
 
+app.get('/', (request, response) => {
+    response.send('Server is up');
+});
 
 app.post('/createUser', async (request, response) => {
     const user = request.body;
