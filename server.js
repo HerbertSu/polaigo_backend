@@ -29,10 +29,8 @@ const PORT = 3000;
 const postgres = knex({
     client: 'pg',
     connection: {
-        host: '127.0.0.1',
-        user: 'postgres',
-        password: 'password',
-        database: 'polaigo_test'
+        connectionString : process.env.DATABASE_URL,
+        ssl : true,
     }
 });
 
