@@ -4,6 +4,8 @@ const cors = require('cors');
 const knex = require('knex');
 const bcrypt = require('bcrypt');
 
+const login = require('./controllers/login');
+
 const {
     convertHRMemberXMLToObj, 
     parseHRMemberDataObj,
@@ -80,31 +82,9 @@ app.post('/createUser', async (request, response) => {
 
 })
 
-app.post('/login', async (request, response) => {
-    
-    const {username, password} = request.body;
 
-    try{
-        const idObj = await postgres('users')
-            .first('id')
-            .where('username', username)
-            
+app.post('/login', async (request, response) => await login.handleLogin(request, response, postgres, bcrypt))
 
-        const hashObj = await postgres('hash')
-            .first('hash')
-            .where('id', parseInt(idObj.id))
-
-        bcrypt.compare(password, hashObj.hash, (err, result) => {
-            if(result){
-                response.status(200).send("Welcome!");
-            }else{
-                response.status(504).send("Incorrect username or password.");
-            };
-        })
-    }catch(error){
-        response.status(504).send("Incorrect username or password.");
-    };
-});
 
 app.post('/get-hr-rep-vote-history-active-full', async (request, response) => {
     const {bioguideid} = request.body;
