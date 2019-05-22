@@ -6,6 +6,7 @@ const bcrypt = require('bcrypt');
 
 const login = require('./controllers/login');
 const hr = require('./controllers/hr');
+const location = require('./controllers/location');
 
 const {
     convertHRMemberXMLToObj, 
@@ -15,8 +16,6 @@ const {
     fetchAndWriteRepresentativesData,
     getDateOfClerksMemberXML,
     } = require('./scripts/HR/HR');
-const {fetchRepresentativeGivenDistrict} = require('./scripts/postgresql/psql');
-const {fetchCongressionalDistrictFromAddress} = require('./scripts/API/GoogleCivicInfo');
 const {dateify} = require('./scripts/dateify');
 const {fetchAndUpdateDBGivenDate} = require('./scripts/fetchAndUpdateDBGivenDate');
 
@@ -88,24 +87,25 @@ app.post('/login', async (request, response) => await login.handleLogin(request,
 
 app.post('/get-hr-rep-vote-history-active-full', async (request, response) => await hr.handleGetRepVoteHistory(request, response, postgres, ACCESS_ARRAY));
 
-app.post('/get-representatives-from-location', async (request, response) => {
+app.post('/get-representatives-from-location', async (request, response) => await location.handleGetRepFromLocation(request, response, postgres)); 
+// app.post('/get-representatives-from-location', async (request, response) => {
 
-    try{
-        const {addressLine1, addressLine2, city, state, zipCode} = request.body;
+//     try{
+//         const {addressLine1, addressLine2, city, state, zipCode} = request.body;
 
-        let address = `${addressLine1} ${addressLine2}, ${city}, ${state} ${zipCode}`;
-        let district = await fetchCongressionalDistrictFromAddress(address);
-        let representative = await fetchRepresentativeGivenDistrict(district.state, district.districtNumber, postgres );
+//         let address = `${addressLine1} ${addressLine2}, ${city}, ${state} ${zipCode}`;
+//         let district = await fetchCongressionalDistrictFromAddress(address);
+//         let representative = await fetchRepresentativeGivenDistrict(district.state, district.districtNumber, postgres );
 
-        response.send(representative)
+//         response.send(representative)
 
-    }catch(err){
-        response.status(404).send({
-            "error" : "Invalid address",
-            "message" : `Could not fetch representative for given address. Please check input address. ${err}`
-        });
-    };
-});
+//     }catch(err){
+//         response.status(404).send({
+//             "error" : "Invalid address",
+//             "message" : `Could not fetch representative for given address. Please check input address. ${err}`
+//         });
+//     };
+// });
 
 //***** For populating representatives_of_hr_active table
 // ( async () => {
