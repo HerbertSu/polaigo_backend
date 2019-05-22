@@ -4,6 +4,11 @@ const cors = require('cors');
 const knex = require('knex');
 const bcrypt = require('bcrypt');
 
+const login = require('./controllers/login');
+const hr = require('./controllers/hr');
+const location = require('./controllers/location');
+const userMainetenance = require('./controllers/userMaintenance');
+
 const {
     convertHRMemberXMLToObj, 
     parseHRMemberDataObj,
@@ -12,8 +17,6 @@ const {
     fetchAndWriteRepresentativesData,
     getDateOfClerksMemberXML,
     } = require('./scripts/HR/HR');
-const {fetchRepresentativeGivenDistrict} = require('./scripts/postgresql/psql');
-const {fetchCongressionalDistrictFromAddress} = require('./scripts/API/GoogleCivicInfo');
 const {dateify} = require('./scripts/dateify');
 const {fetchAndUpdateDBGivenDate} = require('./scripts/fetchAndUpdateDBGivenDate');
 
@@ -37,161 +40,13 @@ const postgres = knex({
 });
 
 
-app.post('/createUser', async (request, response) => {
-    const user = request.body;
+app.post('/createUser', async (request, response) => await userMainetenance.handleCreateUser(request, response, postgres, bcrypt));
 
-    await bcrypt.hash(user.password, 0, (err, hash) => {
-        postgres.transaction(trx => {
-            trx.table("users")
-                .returning("id")
-                .insert({
-                    username : user.username,
-                    firstname : user.firstname,
-                    lastname : user.lastname,
-                    middlename : user.middlename,
-                    email : user.email
-                })
-                .catch(error=> {
-                    throw error;
-                })
-                .then((id) => {
-                    return trx("hash")
-                        .insert({
-                            id : parseInt(id),
-                            hash : hash
-                        })
-                        .catch(error => {
-                            throw error;
-                        });
-                })
-            .then(trx.commit)
-            .then(()=>{
-                response.send("New user has been created.");
-            })
-            .catch(err => {
-                console.log(err);
-                trx.rollback;
-                response.status(500).send("Could not create new user.")
-                throw err;
-                
-            });
-        });
-    });
+app.post('/login', async (request, response) => await login.handleLogin(request, response, postgres, bcrypt));
 
-})
+app.post('/get-hr-rep-vote-history-active-full', async (request, response) => await hr.handleGetRepVoteHistory(request, response, postgres, ACCESS_ARRAY));
 
-app.post('/login', async (request, response) => {
-    
-    const {username, password} = request.body;
-
-    try{
-        const idObj = await postgres('users')
-            .first('id')
-            .where('username', username)
-            
-
-        const hashObj = await postgres('hash')
-            .first('hash')
-            .where('id', parseInt(idObj.id))
-
-        bcrypt.compare(password, hashObj.hash, (err, result) => {
-            if(result){
-                response.status(200).send("Welcome!");
-            }else{
-                response.status(504).send("Incorrect username or password.");
-            };
-        })
-    }catch(error){
-        response.status(504).send("Incorrect username or password.");
-    };
-});
-
-app.post('/get-hr-rep-vote-history-active-full', async (request, response) => {
-    const {bioguideid} = request.body;
-
-    let isRepresentativeActive = await postgres("representatives_of_hr_active")
-        .select("bioguideid")
-        .where("bioguideid", bioguideid);
-    
-    if(isRepresentativeActive.length === 0 || isRepresentativeActive === undefined){
-        response.status(404).send({
-            "message" : `${bioguideid} is either inactive or contains incorrect syntax.`,
-            "controller" : '/getHRRepVoteHistoryActiveFull'
-        });
-        return;
-    };
-
-    let repVoteHistory = await postgres("vote_histories_hr_active")
-        .select("votinghistory")
-        .where("bioguideid", bioguideid)
-        .then(res => {
-            return res[ACCESS_ARRAY];
-        });
-
-    let voteHistoryObject = Object.values(repVoteHistory)[ACCESS_ARRAY];
-    let voteHistoryArray = Object.entries(voteHistoryObject).sort();
-
-    let congressterm_session_roll_Array = [];
-
-    for(let key in voteHistoryObject){
-        let entries = key.split("_");
-        let congressterm_session_roll = entries.map((element) => parseInt(element));
-        
-        congressterm_session_roll_Array.push(congressterm_session_roll);
-    };
-
-    let selectedRollCallVotes = await postgres("roll_call_votes_hr")
-        .select(
-            'congressterm',
-            'session',
-            'roll',
-            'result',
-            'date',
-            'issue',
-            'question'
-        )
-        .whereIn(['congressterm', 'session', 'roll'], congressterm_session_roll_Array)
-        .orderByRaw('congressterm::int DESC, session::int DESC, roll::int DESC');
-
-    let representativeVoteObjectArray = selectedRollCallVotes.map((rollCallObj) => {
-        rollCallObj.roll = String(parseInt(rollCallObj.roll));
-
-        if(rollCallObj.roll.length == 1){
-            rollCallObj.roll = "00"+ rollCallObj.roll;
-        }else if(rollCallObj.roll.length == 2){
-            rollCallObj.roll = "0"+ rollCallObj.roll;
-        }
-
-        let congressterm_session_roll = `${rollCallObj.congressterm}_${rollCallObj.session}_${rollCallObj.roll}`; 
-
-        let match = voteHistoryArray.find((congressterm_session_roll_AND_voted) => congressterm_session_roll_AND_voted[0] == congressterm_session_roll);
-
-        return {
-            ...rollCallObj,
-            ...match[1]
-        };
-    });
-    response.send(representativeVoteObjectArray);
-});
-
-app.post('/get-representatives-from-location', async (request, response) => {
-
-    try{
-        const {addressLine1, addressLine2, city, state, zipCode} = request.body;
-
-        let address = `${addressLine1} ${addressLine2}, ${city}, ${state} ${zipCode}`;
-        let district = await fetchCongressionalDistrictFromAddress(address);
-        let representative = await fetchRepresentativeGivenDistrict(district.state, district.districtNumber, postgres );
-
-        response.send(representative)
-
-    }catch(err){
-        response.status(404).send({
-            "error" : "Invalid address",
-            "message" : `Could not fetch representative for given address. Please check input address. ${err}`
-        });
-    };
-});
+app.post('/get-representatives-from-location', async (request, response) => await location.handleGetRepFromLocation(request, response, postgres)); 
 
 //***** For populating representatives_of_hr_active table
 // ( async () => {
