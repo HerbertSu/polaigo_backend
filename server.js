@@ -48,6 +48,8 @@ app.post('/get-hr-rep-vote-history-active-full', async (request, response) => aw
 
 app.post('/get-representatives-from-location', async (request, response) => await location.handleGetRepFromLocation(request, response, postgres)); 
 
+
+
 //***** For populating representatives_of_hr_active table
 // ( async () => {
 //     let xmlFilePath = await fetchAndWriteRepresentativesData();
@@ -63,19 +65,11 @@ app.post('/get-representatives-from-location', async (request, response) => awai
 // updateVoteHistoriesActiveBioGuideIds(postgres);
 //*****
 
-//***** For fetching a representative's information given an address
-// (async () => {
-//     let district = await fetchCongressionalDistrictFromAddress("50 north illinois street Indianapolis Indiana 46204");
-//     console.log(district);
-//     let representative = await fetchRepresentativeGivenDistrict(district.state, district.districtNumber, postgres );
-//     console.log(representative);
-// })()
-//*****
 
 //***** For updating tables with new data given a date
-// (async ()=> {
-//     console.log( await fetchAndUpdateDBGivenDate("Dec 21, 2018", postgres));
-// })()
+(async ()=> {
+    console.log( await fetchAndUpdateDBGivenDate("Dec 25, 2018", postgres));
+})()
 //***** 
 
 

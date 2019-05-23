@@ -16,7 +16,8 @@ const {gatherAndUpsertRollCallData} = require('./scripts');
  * @param {*} postgres 
  */
 const fetchAndUpdateDBGivenDate = async (date, postgres) =>{
-    date = dateify(date);
+    try{
+        date = dateify(date);
     let filepath = await fetchAndWriteCRECXMLFromDate(date);
     let CRECObj = convertCRECXMLToObject(filepath);
     let relatedItems = retrieveCRECSubSections(CRECObj);
@@ -28,7 +29,11 @@ const fetchAndUpdateDBGivenDate = async (date, postgres) =>{
     await gatherAndUpsertRollCallData(rollCallsHRCREC, postgres);
 
     return `Vote data for ${date} CREC has been fetched and updated in DB.`;
-}
+    } 
+    catch(err){
+        console.log(`${err}. Error located in fetchAndUpdateDBGivenDate().`);
+    };
+};
 
 module.exports = {
     fetchAndUpdateDBGivenDate,
