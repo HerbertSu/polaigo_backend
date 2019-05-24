@@ -18,20 +18,30 @@ const {gatherAndUpsertRollCallData} = require('./scripts');
 const fetchAndUpdateDBGivenDate = async (date, postgres) =>{
     try{
         date = dateify(date);
-    let filepath = await fetchAndWriteCRECXMLFromDate(date);
-    let CRECObj = convertCRECXMLToObject(filepath);
-    let relatedItems = retrieveCRECSubSections(CRECObj);
-    let metadataOfCREC = getDataOfCREC(CRECObj);
-    let congVotes = parseCRECForCongVotes(relatedItems);
-    let rollCallsHRCREC = getAllHRRollCallsFromCREC(congVotes, CRECObj);
-    let rollCallsSenateCREC = getAllSenateRollCallsFromCREC(congVotes, CRECObj);
+        let filepath = await fetchAndWriteCRECXMLFromDate(date);
+        let CRECObj = convertCRECXMLToObject(filepath);
+        let relatedItems = retrieveCRECSubSections(CRECObj);
+        // let metadataOfCREC = getDataOfCREC(CRECObj);
 
-    await gatherAndUpsertRollCallData(rollCallsHRCREC, postgres);
+        //Create exception for:
+            //What if there are no CongVotes?
+        let congVotes = parseCRECForCongVotes(relatedItems);
+        let rollCallsHRCREC = getAllHRRollCallsFromCREC(congVotes, CRECObj);
+        let rollCallsSenateCREC = getAllSenateRollCallsFromCREC(congVotes, CRECObj);
 
-    return `Vote data for ${date} CREC has been fetched and updated in DB.`;
+        await gatherAndUpsertRollCallData(rollCallsHRCREC, postgres);
+
+        return {
+                status : 200,
+                message : `Vote data for ${date} CREC has been fetched and updated in DB.`
+            };
     } 
     catch(err){
         console.log(`${err}. Error located in fetchAndUpdateDBGivenDate().`);
+        return {
+            status: 404,
+            message: `${err}. Error located in fetchAndUpdateDBGivenDate().`
+        };
     };
 };
 

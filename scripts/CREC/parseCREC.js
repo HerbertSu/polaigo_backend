@@ -23,7 +23,7 @@ let fetchAndWriteCRECXMLFromDate = async (date) =>{
             if(res.status == 404){
                 throw `404: No congressional records available for ${date}`;
             };
-            let text = await res.text();
+            let text = await res.text(); 
             fs.writeFileSync(filepath, text, err=>{
                 if(err){
                     console.log(err);

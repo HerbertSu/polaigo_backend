@@ -8,6 +8,7 @@ const login = require('./controllers/login');
 const hr = require('./controllers/hr');
 const location = require('./controllers/location');
 const userMainetenance = require('./controllers/userMaintenance');
+const admin = require('./controllers/admin');
 
 const {
     convertHRMemberXMLToObj, 
@@ -48,6 +49,7 @@ app.post('/get-hr-rep-vote-history-active-full', async (request, response) => aw
 
 app.post('/get-representatives-from-location', async (request, response) => await location.handleGetRepFromLocation(request, response, postgres)); 
 
+app.post('/get-and-update-db-given-date', async (request, response) => await admin.handleUpdateDBGivenDate(request, response, postgres));
 
 
 //***** For populating representatives_of_hr_active table
@@ -68,7 +70,7 @@ app.post('/get-representatives-from-location', async (request, response) => awai
 
 //***** For updating tables with new data given a date
 (async ()=> {
-    console.log( await fetchAndUpdateDBGivenDate("Dec 25, 2018", postgres));
+    console.log( await fetchAndUpdateDBGivenDate("Dec 22, 2018", postgres));
 })()
 //***** 
 
