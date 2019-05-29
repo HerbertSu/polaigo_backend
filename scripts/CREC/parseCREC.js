@@ -35,7 +35,7 @@ let fetchAndWriteCRECXMLFromDate = async (date) =>{
         };
     }
     else {
-        throw `File ${filepath} already exists.`;
+        console.warn(`File ${filepath} already exists.`);
     };
     return filepath;
 }
