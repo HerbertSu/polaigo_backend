@@ -17,31 +17,37 @@ const {dateify} = require('../dateify');
  */
 let fetchAndWriteRepresentativesData = async () => {
     let hrMemberDataXMLFileName = "";
-    await fetch('http://clerk.house.gov/xml/lists/MemberData.xml')
-        .then( xml => xml.text())
-        .then( data => {
-            let publishDate = "";
-            parseString(data, {
-                trim: true, 
-                attrkey: 'attr',
-            }, 
-            function (err, result){
-                publishDate = dateify(result.MemberData.attr["publish-date"]);
-            })
+    let xml = await fetch('http://clerk.house.gov/xml/lists/MemberData.xml')
+    if(xml.status == 404){
+        throw {
+            status: 404,
+            message: `Member data not found.`
+        };
+    };
+    let data = await xml.text();
+    let publishDate = "";
+    parseString(data, {
+            trim: true, 
+            attrkey: 'attr',
+        }, 
+        function (err, result){
+            publishDate = dateify(result.MemberData.attr["publish-date"]);
+        }
+    );
+    
+    hrMemberDataXMLFileName = `./test/HR-Representatives-Data-${publishDate}.txt`;
 
-            hrMemberDataXMLFileName = `./test/HR-Representatives-Data-${publishDate}.txt`;
-
-            if(!fs.existsSync(hrMemberDataXMLFileName)){
-                fs.writeFile(hrMemberDataXMLFileName, data, err=>{
-                    if(err){
-                        console.log(err)
-                        throw err;
-                    }
-                })
-            }
-        })
+    if(!fs.existsSync(hrMemberDataXMLFileName)){
+        fs.writeFile(hrMemberDataXMLFileName, data, err=>{
+            if(err){
+                console.log(err)
+                throw err;
+            };
+        });
+    };
+    
     return hrMemberDataXMLFileName;
-}
+};
 
 
 /**

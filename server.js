@@ -51,15 +51,15 @@ app.post('/get-representatives-from-location', async (request, response) => awai
 
 app.post('/get-and-update-db-given-date', async (request, response) => await admin.handleUpdateDBGivenDate(request, response, postgres));
 
-
+//Check logic of updateRepresentativesActiveTable()
 //***** For populating representatives_of_hr_active table
-// ( async () => {
-//     let xmlFilePath = await fetchAndWriteRepresentativesData();
-//     let representativesObj = convertHRMemberXMLToObj(xmlFilePath);
-//     let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
-//     let HRMemberList = parseHRMemberDataObj(representativesObj);
-//     updateRepresentativesActiveTable(HRMemberList, dateOfMemberData, postgres);
-// })();
+( async () => {
+    let xmlFilePath = await fetchAndWriteRepresentativesData();
+    let representativesObj = convertHRMemberXMLToObj(xmlFilePath);
+    let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
+    let HRMemberList = parseHRMemberDataObj(representativesObj);
+    // updateRepresentativesActiveTable(HRMemberList, dateOfMemberData, postgres);
+})();
 //*****
 
 
@@ -69,9 +69,9 @@ app.post('/get-and-update-db-given-date', async (request, response) => await adm
 
 
 //***** For updating tables with new data given a date
-(async ()=> {
-    console.log( await fetchAndUpdateDBGivenDate("Dec 22, 2018", postgres));
-})()
+// (async ()=> {
+//     console.log( await fetchAndUpdateDBGivenDate("Dec 22, 2018", postgres));
+// })()
 //***** 
 
 
