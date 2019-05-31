@@ -52,23 +52,27 @@ app.post('/get-representatives-from-location', async (request, response) => awai
 
 app.post('/get-and-update-db-given-date', async (request, response) => await admin.handleUpdateDBGivenDate(request, response, postgres));
 
-//Check logic of updateRepresentativesActiveTable()
+
 //***** For populating representatives_of_hr_active table
-( async () => {
-    let xmlFilePath = await fetchAndWriteRepresentativesData();
-    let representativesObj = convertHRMemberXMLToObj(xmlFilePath);
-    let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
-    let HRMemberList = parseHRMemberDataObj(representativesObj);
-    let shouldUpdate = await compareDatesOfLastHRMembersUpdate(dateOfMemberData, postgres);
-    if(shouldUpdate){
-        updateRepresentativesActiveTable(HRMemberList, dateOfMemberData, postgres);
-    };
+// ( async () => {
+//     let xmlFilePath = await fetchAndWriteRepresentativesData();
+//     let representativesObj = convertHRMemberXMLToObj(xmlFilePath);
+//     let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
+//     let HRMemberList = parseHRMemberDataObj(representativesObj);
+//     let shouldUpdate = await compareDatesOfLastHRMembersUpdate(dateOfMemberData, postgres);
+//     if(shouldUpdate){
+//         // updateRepresentativesActiveTable(HRMemberList, dateOfMemberData, postgres);
+//         console.log('updating representatives_active table')
+//     };
     
     
-})();
+// })();
 //*****
 
-
+//TODO:
+    //Check logic of updateVoteHistoriesBioGuideIds() --> moving old/retired bioguideids into inactive tables, including their vote histories
+        //If a bioguideid/rep is identified as no longer active, move their vote_histories from active to inactive tables (copy over)
+        //case for if a rep who was inactive becomes active again?
 //***** For Updating the vote history bioguideids 
 // updateVoteHistoriesActiveBioGuideIds(postgres);
 //*****

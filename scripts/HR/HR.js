@@ -209,8 +209,6 @@ let compareDatesOfLastHRMembersUpdate = async (dateOfUpdate, postgres) => {
  */
 let updateRepresentativesActiveTable = (HRMemberList, dateOfUpdate, postgres, ) => {
 
-    console.log("updating new RepresentativesActiveTable")
-    return;
     postgres.transaction( trx => {
         trx.table("representatives_of_hr_active")
             .truncate()
@@ -245,9 +243,9 @@ let updateRepresentativesActiveTable = (HRMemberList, dateOfUpdate, postgres, ) 
         .catch( (err) => {
             console.log(err);
             trx.rollback;
-        })
-    })
-}   
+        });
+    });
+};
 
 
 /**
