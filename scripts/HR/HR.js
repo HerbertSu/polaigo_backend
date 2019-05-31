@@ -159,19 +159,25 @@ let compareActiveRepresentativesForUpdates = (HRMemberList, postgres) => {
  * @returns shouldUpdate: true if should update, false if shouldn't.
  */
 let compareDatesOfLastHRMembersUpdate = async (dateOfUpdate, postgres) => {
-    let date = await postgres.select("date").table("date_of_last_hr_members_update");
-    let dateOfLastUpdate = dateify(date[ACCESS_ARRAY].date);
-    
-    let shouldUpdate = true;
+    try{
+        let date = await postgres.select("date").table("date_of_last_hr_members_update");
+        let dateOfLastUpdate = dateify(date[ACCESS_ARRAY].date);
+        
+        let shouldUpdate = true;
 
-    if(dateOfLastUpdate > dateOfUpdate){
-        shouldUpdate = false;
-        throw {
-            status : 304,
-            message : 'Date of new HR members list is older than the one currently stored.'
+        if(dateOfLastUpdate > dateOfUpdate){
+            shouldUpdate = false;
+            throw {
+                status : 304,
+                message : 'Date of new HR members list is older than the one currently stored.'
+            };
         };
+        return shouldUpdate;
+    } 
+    catch(err){
+        console.error(err)
     };
-    return shouldUpdate;
+    
 };
 
 //TODO instead of truncating representatives_of_hr_active table every time 
