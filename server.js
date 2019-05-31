@@ -17,6 +17,7 @@ const {
     updateVoteHistoriesActiveBioGuideIds,
     fetchAndWriteRepresentativesData,
     getDateOfClerksMemberXML,
+    compareDatesOfLastHRMembersUpdate,
     } = require('./scripts/HR/HR');
 const {dateify} = require('./scripts/dateify');
 const {fetchAndUpdateDBGivenDate} = require('./scripts/fetchAndUpdateDBGivenDate');
@@ -58,7 +59,12 @@ app.post('/get-and-update-db-given-date', async (request, response) => await adm
     let representativesObj = convertHRMemberXMLToObj(xmlFilePath);
     let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
     let HRMemberList = parseHRMemberDataObj(representativesObj);
-    // updateRepresentativesActiveTable(HRMemberList, dateOfMemberData, postgres);
+    let shouldUpdate = await compareDatesOfLastHRMembersUpdate(dateOfMemberData, postgres);
+    if(shouldUpdate){
+        updateRepresentativesActiveTable(HRMemberList, dateOfMemberData, postgres);
+    };
+    
+    
 })();
 //*****
 

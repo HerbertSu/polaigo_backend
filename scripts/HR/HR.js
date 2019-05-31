@@ -151,6 +151,29 @@ let compareActiveRepresentativesForUpdates = (HRMemberList, postgres) => {
         })
 }
 
+
+/**
+ * Compares the date of the received HR Member list with the one stored in the database.
+ * @param {string} dateOfUpdate Date of said member data in yyyy-mm-dd form. Example input is the result of getDateOfClerksMemberXML().
+ * @param {*} postgres 
+ * @returns shouldUpdate: true if should update, false if shouldn't.
+ */
+let compareDatesOfLastHRMembersUpdate = async (dateOfUpdate, postgres) => {
+    let date = await postgres.select("date").table("date_of_last_hr_members_update");
+    let dateOfLastUpdate = dateify(date[ACCESS_ARRAY].date);
+    
+    let shouldUpdate = true;
+
+    if(dateOfLastUpdate > dateOfUpdate){
+        shouldUpdate = false;
+        throw {
+            status : 304,
+            message : 'Date of new HR members list is older than the one currently stored.'
+        };
+    };
+    return shouldUpdate;
+};
+
 //TODO instead of truncating representatives_of_hr_active table every time 
     //there's new member data, write a function that compares the new
     //data with the data in the table and change/update accordingly.
@@ -179,6 +202,9 @@ let compareActiveRepresentativesForUpdates = (HRMemberList, postgres) => {
  * @param {*} postgres 
  */
 let updateRepresentativesActiveTable = (HRMemberList, dateOfUpdate, postgres, ) => {
+
+    console.log("updating new RepresentativesActiveTable")
+    return;
     postgres.transaction( trx => {
         trx.table("representatives_of_hr_active")
             .truncate()
@@ -255,5 +281,6 @@ module.exports = {
     compareActiveRepresentativesForUpdates,
     updateVoteHistoriesActiveBioGuideIds,
     getDateOfClerksMemberXML,
+    compareDatesOfLastHRMembersUpdate
 }
 
