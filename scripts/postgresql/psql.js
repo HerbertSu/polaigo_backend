@@ -40,7 +40,7 @@ const insertIntoTable_roll_call_votes_hr = async (rollDataClerk, congVote, postg
  */
 let upsertQueryRaw = (tableName, columnName, columnListFromSQL, conflict="", action="DO NOTHING" ) =>{
     let valuesList = columnListFromSQL.map((columnObj)=>{
-        return "('" + Object.values(columnObj)[0] + "')";
+        return "('" + Object.values(columnObj)[ACCESS_ARRAY] + "')";
     });
     let valuesString = valuesList.join(",")
     let upsert = `INSERT INTO ${tableName} (${columnName}) VALUES ${valuesString} ON CONFLICT ${conflict} ${action};`;

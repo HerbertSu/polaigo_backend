@@ -247,35 +247,81 @@ let updateRepresentativesActiveTable = (HRMemberList, dateOfUpdate, postgres, ) 
     });
 };
 
+/**
+ * Creates new entries into vote_histories_hr_active with just the bioguideid filled out. A new entry is only created if the bioguideid does not already exist in vote_histories_hr_active.
+ * @param {*} postgres 
+ * @param {string} tableName Name of table we are inserting into. Here it is 'vote_histories_hr_active';
+ * @param {string} columnName Name of the reference column we are using to see if the row/entry already exists. Here it is 'bioguideid';
+ * @param {Array} bioIdGuideListFromSQL Empty array that will hold the bioguideid's in the representatives_of_hr_active table.
+ */
+const insertNewBioguideIDsIntoVoteHistoriesHRActive = async (postgres, tableName, columnName, bioIdGuideListFromSQL) => {
+    await postgres.transaction( trx => {
+        trx.select(columnName)
+            .from("representatives_of_hr_active")
+            .then(res => {
+                bioIdGuideListFromSQL = res;
+                let insertOnConflictQuery =  upsertQueryRaw(tableName, columnName, bioIdGuideListFromSQL);
+                return trx.raw(insertOnConflictQuery);
+                })
+            .then(trx.commit)
+            .catch(err=>{
+                console.log(err);
+                trx.rollback;
+            });
+    });
+};
+
+
+/**
+ * Transfers inactive representatives' vote history from the vote_histories_hr_active table into vote_histories_hr_inactive.
+ * @todo Left outer join the bioguideids from vote_histories_hr_active <-against-> representatives_of_hr_active 
+ * @param {*} postgres 
+ */
+const transferInactivesFromVoteHistoriesHRActive = async(postgres) => {
+
+};
+
 
 /**
  * Updates the vote_histories_hr_active table by inserting new members.
  * @todo The current form of this function only ignores duplicates and adds any bioguideid's that aren't currently in the table. Also needs to add logic that removes old bioguideid's and move their data into vote_histories_hr_inactive if the 'date_of_last_hr_members_update' table's 'date' value is later than the representative's 'dateoflastupdate' column value in the 'representatives_of_hr_active' table.
  * @param {*} postgres 
  */
-let updateVoteHistoriesActiveBioGuideIds = (postgres) => {
+let updateVoteHistoriesActiveBioGuideIds = async (postgres) => {
+    // Cases to consider:
+        //1. Remove old bioguideids and move their data into vote_histories_hr_inactive 
+            //if the 'date_of_last_hr_members_update' table's 'date' value is later than the representative's 
+            //'dateoflastupdate' column value in the 'representatives_of_hr_active' table.
+
     let tableName = "vote_histories_hr_active";
     let columnName = "bioguideid";
 
     let bioIdGuideListFromSQL = [];
     
-    postgres.transaction( trx => {
-        trx.select("bioguideid")
-            .from("representatives_of_hr_active")
-            .then(res => {
-                bioIdGuideListFromSQL = res;
-                let insertOnConflictQuery =  upsertQueryRaw(tableName, columnName, bioIdGuideListFromSQL);
-                return trx.raw(insertOnConflictQuery)                
-                })
-            .then(trx.commit)
-            .catch(err=>{
-                console.log(err);
-                trx.rollback;
-            })
-            
-        
-    })
-}
+    await insertNewBioguideIDsIntoVoteHistoriesHRActive(postgres, tableName, columnName, bioIdGuideListFromSQL);
+};
+
+// let updateVoteHistoriesActiveBioGuideIds = (postgres) => {
+//     let tableName = "vote_histories_hr_active";
+//     let columnName = "bioguideid";
+
+//     let bioIdGuideListFromSQL = [];
+    
+//     postgres.transaction( trx => {
+//         trx.select("bioguideid")
+//             .from("representatives_of_hr_active")
+//             .then(res => {
+//                 bioIdGuideListFromSQL = res;
+//                 let insertOnConflictQuery =  upsertQueryRaw(tableName, columnName, bioIdGuideListFromSQL);
+//                 return trx.raw(insertOnConflictQuery)                
+//                 })
+//             .then(trx.commit)
+//             .catch(err=>{
+//                 console.log(err);
+//                 trx.rollback;
+//             });
+//     });
+// };
 
 module.exports = {
     fetchAndWriteRepresentativesData,

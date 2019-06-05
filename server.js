@@ -74,7 +74,9 @@ app.post('/get-and-update-db-given-date', async (request, response) => await adm
         //If a bioguideid/rep is identified as no longer active, move their vote_histories from active to inactive tables (copy over)
         //case for if a rep who was inactive becomes active again?
 //***** For Updating the vote history bioguideids 
-// updateVoteHistoriesActiveBioGuideIds(postgres);
+(async () => {
+    await updateVoteHistoriesActiveBioGuideIds(postgres);
+})()
 //*****
 
 
