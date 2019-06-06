@@ -1,7 +1,7 @@
 const fs = require('fs');
 const fetch = require('node-fetch');
 const parseString = require('xml2js').parseString;
-const {upsertQueryRaw} = require('../postgresql/psql');
+const {upsertQueryRaw, getColumnsOfTableANotInTableB} = require('../postgresql/psql');
 const {ACCESS_ARRAY} = require('../../constants/constants');
 const {dateify} = require('../dateify');
 
@@ -275,9 +275,26 @@ const insertNewBioguideIDsIntoVoteHistoriesHRActive = async (postgres, tableName
 /**
  * Transfers inactive representatives' vote history from the vote_histories_hr_active table into vote_histories_hr_inactive.
  * @todo Left outer join the bioguideids from vote_histories_hr_active <-against-> representatives_of_hr_active 
+ * SELECT v.bioguideid FROM vote_histories_hr_active AS v LEFT JOIN representatives_of_hr_active AS r 
+ *  ON v.bioguideid = r.bioguideid WHERE r.bioguideid IS NULL;
+ * @todo Finish getColumnsOfTableANotInTableB()
  * @param {*} postgres 
+ * 
  */
-const transferInactivesFromVoteHistoriesHRActive = async(postgres) => {
+const transferInactivesFromVoteHistoriesHRActive = async (postgres) => {
+
+    leftTable = "vote_histories_hr_active";
+    rightTable = "representatives_of_hr_active";
+
+    getColumnsOfTableANotInTableB(leftTable, rightTable, ['bioguideid'], postgres);
+
+    // let inactiveBioguideIds = await postgres.select(`${leftTable}.bioguideid`)
+    //     .from(leftTable)
+    //     .leftJoin(rightTable, function(){
+    //         this.on(`${leftTable}.bioguideid`, "=", `${rightTable}.bioguideid`)
+    //     })
+    //     .whereNull(`${rightTable}.bioguideid`)
+    // console.log(inactiveBioguideIds)
 
 };
 
@@ -298,7 +315,8 @@ let updateVoteHistoriesActiveBioGuideIds = async (postgres) => {
 
     let bioIdGuideListFromSQL = [];
     
-    await insertNewBioguideIDsIntoVoteHistoriesHRActive(postgres, tableName, columnName, bioIdGuideListFromSQL);
+    // await insertNewBioguideIDsIntoVoteHistoriesHRActive(postgres, tableName, columnName, bioIdGuideListFromSQL);
+    await transferInactivesFromVoteHistoriesHRActive(postgres);
 };
 
 // let updateVoteHistoriesActiveBioGuideIds = (postgres) => {

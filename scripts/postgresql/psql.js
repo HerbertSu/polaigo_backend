@@ -70,6 +70,30 @@ const fetchRepresentativeGivenDistrict = async (state, district, postgres) => {
             throw err;
         })
     return representative[ACCESS_ARRAY];
+};
+
+/**
+ * 
+ * @param {*} tableA 
+ * @param {*} tableB 
+ * @param {*} columns 
+ * @param {*} postgres 
+ */
+const getColumnsOfTableANotInTableB = async (tableA, tableB, columns, postgres) => {
+
+    let tableADotColumns = columns.map((column)=> {
+        return `${tableA}.${column}`
+    });
+
+    postgres.column(columns)
+        .select()
+
+    // await postgres.select(`${tableA}.bioguideid`)
+    //     .from(leftTable)
+    //     .leftJoin(rightTable, function(){
+    //         this.on(`${leftTable}.bioguideid`, "=", `${rightTable}.bioguideid`)
+    //     })
+    //     .whereNull(`${rightTable}.bioguideid`)
 }
 
 
@@ -77,4 +101,5 @@ module.exports = {
     insertIntoTable_roll_call_votes_hr,
     upsertQueryRaw,
     fetchRepresentativeGivenDistrict,
+    getColumnsOfTableANotInTableB,
 }
