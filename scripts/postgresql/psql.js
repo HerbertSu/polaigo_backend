@@ -73,28 +73,36 @@ const fetchRepresentativeGivenDistrict = async (state, district, postgres) => {
 };
 
 /**
- * 
- * @param {*} tableA 
- * @param {*} tableB 
- * @param {*} columns 
+ * Returns a list of values specified in columnsToReturn. The entries returned are values in tableA's columnToCompare that are not in tableB's columnToCompare. 
+ * @param {string} tableA Name of table who's missing values we want.
+ * @param {string} tableB Name of table who's values we are comparing tableA against.
+ * @param {Array} columnsToReturn List of column names as strings in tableA whose values we want.
+ * @param {string} columnToCompare Column whose values we want to compare tableA and tableB with. Column should be shared between both tables.
  * @param {*} postgres 
+ * @returns A list of the values specified in columnsToReturn.
  */
-const getColumnsOfTableANotInTableB = async (tableA, tableB, columns, postgres) => {
+const getColumnsOfTableANotInTableB = async (tableA, tableB, columnsToReturn, columnToCompare, postgres) => {
 
-    let tableADotColumns = columns.map((column)=> {
+    let tableADotColumns = columnsToReturn.map((column)=> {
         return `${tableA}.${column}`
     });
 
-    postgres.column(columns)
+    let listOfMissingValues = await postgres.column(tableADotColumns)
         .select()
+        .from(tableA)
+        .leftJoin(tableB, function(){
+            this.on(`${tableA}.${columnToCompare}`, "=", `${tableB}.${columnToCompare}`)
+        })
+        .whereNull(`${tableB}.${columnToCompare}`)
+        .catch(err=>{
+            throw {
+                err,
+                message: 'Error located in getColumnsOfTableNotInTableB'
+            };
+        });
 
-    // await postgres.select(`${tableA}.bioguideid`)
-    //     .from(leftTable)
-    //     .leftJoin(rightTable, function(){
-    //         this.on(`${leftTable}.bioguideid`, "=", `${rightTable}.bioguideid`)
-    //     })
-    //     .whereNull(`${rightTable}.bioguideid`)
-}
+    return listOfMissingValues;
+};
 
 
 module.exports = {

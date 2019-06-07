@@ -277,25 +277,31 @@ const insertNewBioguideIDsIntoVoteHistoriesHRActive = async (postgres, tableName
  * @todo Left outer join the bioguideids from vote_histories_hr_active <-against-> representatives_of_hr_active 
  * SELECT v.bioguideid FROM vote_histories_hr_active AS v LEFT JOIN representatives_of_hr_active AS r 
  *  ON v.bioguideid = r.bioguideid WHERE r.bioguideid IS NULL;
- * @todo Finish getColumnsOfTableANotInTableB()
+ * @todo Copy the vote histories of inactive bioguideids found in inactiveBioguideIDsList from vote_history_hr_active to vote_history_hr_inactive. Then delete the entry from vote_history_hr_active.
  * @param {*} postgres 
  * 
  */
 const transferInactivesFromVoteHistoriesHRActive = async (postgres) => {
+    
+    try{
+        let leftTable = "vote_histories_hr_active";
+        let rightTable = "representatives_of_hr_active";
 
-    leftTable = "vote_histories_hr_active";
-    rightTable = "representatives_of_hr_active";
+        let inactiveBioguideIDsList = await getColumnsOfTableANotInTableB(leftTable, rightTable, ['bioguideid'], 'bioguideid', postgres);
+        console.log(inactiveBioguideIDsList);
 
-    getColumnsOfTableANotInTableB(leftTable, rightTable, ['bioguideid'], postgres);
+        // postgres.transaction(trx =>{
 
-    // let inactiveBioguideIds = await postgres.select(`${leftTable}.bioguideid`)
-    //     .from(leftTable)
-    //     .leftJoin(rightTable, function(){
-    //         this.on(`${leftTable}.bioguideid`, "=", `${rightTable}.bioguideid`)
-    //     })
-    //     .whereNull(`${rightTable}.bioguideid`)
-    // console.log(inactiveBioguideIds)
+        // })
 
+
+    }catch (error) {
+        console.log(error);
+        throw{
+            error,
+            message: 'Error located in transferInactivesFromVoteHistoriesHRActive'
+        };
+    };
 };
 
 
