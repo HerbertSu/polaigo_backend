@@ -273,26 +273,51 @@ const insertNewBioguideIDsIntoVoteHistoriesHRActive = async (postgres, tableName
 
 
 /**
- * Transfers inactive representatives' vote history from the vote_histories_hr_active table into vote_histories_hr_inactive.
- * @todo Left outer join the bioguideids from vote_histories_hr_active <-against-> representatives_of_hr_active 
- * SELECT v.bioguideid FROM vote_histories_hr_active AS v LEFT JOIN representatives_of_hr_active AS r 
- *  ON v.bioguideid = r.bioguideid WHERE r.bioguideid IS NULL;
- * @todo Copy the vote histories of inactive bioguideids found in inactiveBioguideIDsList from vote_history_hr_active to vote_history_hr_inactive. Then delete the entry from vote_history_hr_active.
- * @param {*} postgres 
+ * Transfers inactive representatives' vote history from the vote_histories_hr_active table into vote_histories_hr_inactive. Deletes the retired bioguideids from vote_histories_hr_active.
+ * Inactivity is based on whether a representative's bioguideID is present in the 'representatives_of_hr_active' table. If not, then the representative is deemed inactive.
+ * Should ONLY be used after new bioguideids are inserted using insertNewBioguideIDsIntoVoteHistoriesHRActive().
+* @param {*} postgres 
  * 
  */
 const transferInactivesFromVoteHistoriesHRActive = async (postgres) => {
     
     try{
-        let leftTable = "vote_histories_hr_active";
-        let rightTable = "representatives_of_hr_active";
+        let tableA = "vote_histories_hr_active";
+        let tableB = "representatives_of_hr_active";
 
-        let inactiveBioguideIDsList = await getColumnsOfTableANotInTableB(leftTable, rightTable, ['bioguideid'], 'bioguideid', postgres);
-        console.log(inactiveBioguideIDsList);
-
-        // postgres.transaction(trx =>{
-
-        // })
+        let inactiveBioguideIDsList = await getColumnsOfTableANotInTableB(tableA, tableB, ['bioguideid'], 'bioguideid', postgres);
+        
+        if(inactiveBioguideIDsList.length > 0){
+            let inactiveBioguideIDs = inactiveBioguideIDsList.map(bioguideidObject => {
+                return bioguideidObject.bioguideid;
+            });
+    
+            let retiredVoteHistories = await postgres.select()
+                .from('vote_histories_hr_active')
+                .whereIn('bioguideid', inactiveBioguideIDs)
+    
+            await postgres.transaction( trx => {
+                trx.table('vote_histories_hr_inactive')
+                    .insert(retiredVoteHistories)
+                    .returning('bioguideid')
+                    .then( (bioguideIDsRemovedFromActive) => {
+                        return trx.table('vote_histories_hr_active')
+                            .del()
+                            .whereIn('bioguideid', bioguideIDsRemovedFromActive)
+                    })
+                    .then(trx.commit)
+                    .catch(err=>{
+                        trx.rollback;
+                        console.log(err)
+                        throw {
+                            error : err,
+                            message : 'Error while transferring retired vote histories into vote_histories_hr_inactive.'
+                        }; 
+                    });
+            });
+        } else {
+            console.log('All representatives in vote_histories_hr_active are up to date. Nothing to transfer.');
+        };
 
 
     }catch (error) {
@@ -307,7 +332,19 @@ const transferInactivesFromVoteHistoriesHRActive = async (postgres) => {
 
 /**
  * Updates the vote_histories_hr_active table by inserting new members.
- * @todo The current form of this function only ignores duplicates and adds any bioguideid's that aren't currently in the table. Also needs to add logic that removes old bioguideid's and move their data into vote_histories_hr_inactive if the 'date_of_last_hr_members_update' table's 'date' value is later than the representative's 'dateoflastupdate' column value in the 'representatives_of_hr_active' table.
+ * @todo The current form of this function only ignores duplicates and adds any bioguideid's that aren't currently in the table. Also needs to add logic that removes old bioguideid's and move their data into vote_histories_hr_inactive if a representative's bioguideid is not present in the 'representatives_of_hr_active' table.
+ * @todo Perform a test run on everything. 
+ *      -Get row counts of every relevant table before any changes
+ *          -representatives_of_hr_active
+ *          -vote_histories_hr_active
+ *          -vote_histories_hr_inactive
+ *      -Check date of 'date_of_last_hr_members_update'
+ *      -Update representatives_of_hr_active with new data
+ *      -Insert new bioguideids into vote_histories_hr_active
+ *      -Transfer inactive bioguideids and their vote histories out of vote_histories_hr_active and into vote_histories_hr_inactive.
+ *          -todo: What if bioguideid already exists in vote_histories_hr_inactive?
+ *              -solution: append to the existing json.
+ *      -Check all counts. Perhaps alter functions to return the affected rows.
  * @param {*} postgres 
  */
 let updateVoteHistoriesActiveBioGuideIds = async (postgres) => {
