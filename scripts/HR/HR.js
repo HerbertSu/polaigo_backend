@@ -34,18 +34,20 @@ let fetchAndWriteRepresentativesData = async () => {
             publishDate = dateify(result.MemberData.attr["publish-date"]);
         }
     );
-    
+
     hrMemberDataXMLFileName = `./test/HR-Representatives-Data-${publishDate}.txt`;
 
     if(!fs.existsSync(hrMemberDataXMLFileName)){
-        fs.writeFile(hrMemberDataXMLFileName, data, err=>{
-            if(err){
-                console.log(err)
-                throw err;
+        try{
+            fs.writeFileSync(hrMemberDataXMLFileName, data);
+        }catch(err){
+            throw {
+                error: err,
+                messaage: 'Error occurred when attempting to write new representative data into file. fetchAndWriteRepresentativesData().'
             };
-        });
+        };
     };
-    
+
     return hrMemberDataXMLFileName;
 };
 
@@ -58,7 +60,6 @@ let fetchAndWriteRepresentativesData = async () => {
 let convertHRMemberXMLToObj = (xmlFilePath) => {
     let xmlMemberData = fs.readFileSync(xmlFilePath);
     let memberObj = {};
-
     parseString(xmlMemberData, {
         trim: true, 
         attrkey: 'attr',
@@ -66,9 +67,9 @@ let convertHRMemberXMLToObj = (xmlFilePath) => {
     }, 
     function (err, result){
         memberObj = result["MemberData"];
-    })
+    });
     return memberObj;
-}
+};
 
 
 /**
@@ -90,12 +91,12 @@ const getDateOfClerksMemberXML = (representativesObj) => {
  */
 let parseHRMemberDataObj = (representativesObj) => {
     let HRMemberList = [];
-    
+
     let representativesList = representativesObj.members[ACCESS_ARRAY].member;
     let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
 
     for(let index = 0; index < representativesList.length; index++){
-        
+
         let district = representativesList[index].statedistrict[ACCESS_ARRAY];
         district = district.replace(/[^0-9]/g,'');
 
@@ -105,13 +106,13 @@ let parseHRMemberDataObj = (representativesObj) => {
         let party = "";
 
         let state = memberInfo.state[ACCESS_ARRAY].attr["postal-code"];
-        if(memberInfo.footnote != undefined){
+        if(memberInfo.bioguideID[ACCESS_ARRAY] == '' && memberInfo.party[ACCESS_ARRAY] == ''){
             bioguideid = `VAC${state}${district}`;
             party = "V";
         } else {
             bioguideid = memberInfo.bioguideID[ACCESS_ARRAY];
             party = memberInfo.party[ACCESS_ARRAY];
-        }
+        };
 
         let firstname = memberInfo.firstname[ACCESS_ARRAY];
         let lastname = memberInfo.lastname[ACCESS_ARRAY];
@@ -164,12 +165,11 @@ let compareDatesOfLastHRMembersUpdate = async (dateOfUpdate, postgres) => {
         let dateOfLastUpdate = dateify(date[ACCESS_ARRAY].date);
         
         let shouldUpdate = true;
-
-        if(dateOfLastUpdate > dateOfUpdate){
+        if(dateOfLastUpdate >= dateOfUpdate){
             shouldUpdate = false;
             throw {
                 status : 304,
-                message : 'Date of new HR members list is older than the one currently stored.'
+                message : 'Date of new HR members list is older than or equal to the one currently stored.'
             };
         };
         return shouldUpdate;
@@ -207,9 +207,9 @@ let compareDatesOfLastHRMembersUpdate = async (dateOfUpdate, postgres) => {
  * @param {string} dateOfUpdate Date of said member data in yyyy-mm-dd form. Example input is the result of getDateOfClerksMemberXML().
  * @param {*} postgres 
  */
-let updateRepresentativesActiveTable = (HRMemberList, dateOfUpdate, postgres, ) => {
+let updateRepresentativesActiveTable = async (HRMemberList, dateOfUpdate, postgres, ) => {
 
-    postgres.transaction( trx => {
+    await postgres.transaction( trx => {
         trx.table("representatives_of_hr_active")
             .truncate()
             .then( () => {
@@ -315,8 +315,10 @@ const transferInactivesFromVoteHistoriesHRActive = async (postgres) => {
                         }; 
                     });
             });
+            return true;
         } else {
             console.log('All representatives in vote_histories_hr_active are up to date. Nothing to transfer.');
+            return false;
         };
 
 
@@ -357,9 +359,17 @@ let updateVoteHistoriesActiveBioGuideIds = async (postgres) => {
     let columnName = "bioguideid";
 
     let bioIdGuideListFromSQL = [];
-    
-    // await insertNewBioguideIDsIntoVoteHistoriesHRActive(postgres, tableName, columnName, bioIdGuideListFromSQL);
-    await transferInactivesFromVoteHistoriesHRActive(postgres);
+    try{
+        await insertNewBioguideIDsIntoVoteHistoriesHRActive(postgres, tableName, columnName, bioIdGuideListFromSQL);
+        let didUpdate = await transferInactivesFromVoteHistoriesHRActive(postgres);
+        if(didUpdate){
+            console.log('Updated vote_histories_hr_active and vote_histories_hr_inactive.')
+        }else{
+            console.log('Nothing new to update in vote_histories_hr_active and vote_histories_hr_inactive.')
+        };
+    }catch(err){
+        console.log(err)
+    };
 };
 
 // let updateVoteHistoriesActiveBioGuideIds = (postgres) => {
