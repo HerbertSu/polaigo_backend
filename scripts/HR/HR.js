@@ -333,20 +333,8 @@ const transferInactivesFromVoteHistoriesHRActive = async (postgres) => {
 
 
 /**
- * Updates the vote_histories_hr_active table by inserting new members.
- * @todo The current form of this function only ignores duplicates and adds any bioguideid's that aren't currently in the table. Also needs to add logic that removes old bioguideid's and move their data into vote_histories_hr_inactive if a representative's bioguideid is not present in the 'representatives_of_hr_active' table.
- * @todo Perform a test run on everything. 
- *      -Get row counts of every relevant table before any changes
- *          -representatives_of_hr_active
- *          -vote_histories_hr_active
- *          -vote_histories_hr_inactive
- *      -Check date of 'date_of_last_hr_members_update'
- *      -Update representatives_of_hr_active with new data
- *      -Insert new bioguideids into vote_histories_hr_active
- *      -Transfer inactive bioguideids and their vote histories out of vote_histories_hr_active and into vote_histories_hr_inactive.
- *          -todo: What if bioguideid already exists in vote_histories_hr_inactive?
- *              -solution: append to the existing json.
- *      -Check all counts. Perhaps alter functions to return the affected rows.
+ * Updates the vote_histories_hr_active table by inserting new members and transferring inactive members and their data to vote_histories_hr_inactive.
+ * @todo What if bioguideid already exists in vote_histories_hr_inactive? -solution: append to the existing json.
  * @param {*} postgres 
  */
 let updateVoteHistoriesActiveBioGuideIds = async (postgres) => {
@@ -371,28 +359,6 @@ let updateVoteHistoriesActiveBioGuideIds = async (postgres) => {
         console.log(err)
     };
 };
-
-// let updateVoteHistoriesActiveBioGuideIds = (postgres) => {
-//     let tableName = "vote_histories_hr_active";
-//     let columnName = "bioguideid";
-
-//     let bioIdGuideListFromSQL = [];
-    
-//     postgres.transaction( trx => {
-//         trx.select("bioguideid")
-//             .from("representatives_of_hr_active")
-//             .then(res => {
-//                 bioIdGuideListFromSQL = res;
-//                 let insertOnConflictQuery =  upsertQueryRaw(tableName, columnName, bioIdGuideListFromSQL);
-//                 return trx.raw(insertOnConflictQuery)                
-//                 })
-//             .then(trx.commit)
-//             .catch(err=>{
-//                 console.log(err);
-//                 trx.rollback;
-//             });
-//     });
-// };
 
 module.exports = {
     fetchAndWriteRepresentativesData,

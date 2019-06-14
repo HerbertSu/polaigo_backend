@@ -53,30 +53,36 @@ app.post('/get-representatives-from-location', async (request, response) => awai
 app.post('/get-and-update-db-given-date', async (request, response) => await admin.handleUpdateDBGivenDate(request, response, postgres));
 
 
-//***** For populating representatives_of_hr_active table
+//***** For updating representatives_of_hr_active table, date_of_last_hr_members_update, vote_histories_hr_active, and vote_histories_hr_inactive. 
+    //Will check HR clerk's website for new members.
+    //If date of update is more recent than the one currently stored in date_of_last_hr_members_update, the update will commence.
+    //Inserts any new representatives into vote_histories_hr_active.
+    //Copies over vote histories of any inactive representatives from vote_histories_hr_active to vote_histories_hr_inactive.
+    //TODO:
+        //Include a case for if a rep who was inactive becomes active again?
 // ( async () => {
-//     let xmlFilePath = await fetchAndWriteRepresentativesData();
-//     let representativesObj = convertHRMemberXMLToObj(xmlFilePath);
-//     let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
-//     let HRMemberList = parseHRMemberDataObj(representativesObj);
-//     let shouldUpdate = await compareDatesOfLastHRMembersUpdate(dateOfMemberData, postgres);
-//     if(shouldUpdate){
-//         // updateRepresentativesActiveTable(HRMemberList, dateOfMemberData, postgres);
-//         console.log('updating representatives_active table')
+//     try{
+//         let xmlFilePath = await fetchAndWriteRepresentativesData();
+//         let representativesObj = convertHRMemberXMLToObj(xmlFilePath);
+//         let dateOfMemberData = getDateOfClerksMemberXML(representativesObj);
+//         let HRMemberList = parseHRMemberDataObj(representativesObj);
+//         let shouldUpdate = await compareDatesOfLastHRMembersUpdate(dateOfMemberData, postgres);
+//         if(shouldUpdate){
+//             await updateRepresentativesActiveTable(HRMemberList, dateOfMemberData, postgres);
+//             await updateVoteHistoriesActiveBioGuideIds(postgres);
+//             console.log('Updates complete.')
+//         };    
+//     }catch(err){
+//         console.log(err);
 //     };
-    
-    
 // })();
 //*****
 
-//TODO:
-    //Check logic of updateVoteHistoriesBioGuideIds() --> moving old/retired bioguideids into inactive tables, including their vote histories
-        //If a bioguideid/rep is identified as no longer active, move their vote_histories from active to inactive tables (copy over)
-        //case for if a rep who was inactive becomes active again?
+
 //***** For Updating the vote history bioguideids 
-(async () => {
-    await updateVoteHistoriesActiveBioGuideIds(postgres);
-})()
+// (async () => {
+//     await updateVoteHistoriesActiveBioGuideIds(postgres);
+// })()
 //*****
 
 
