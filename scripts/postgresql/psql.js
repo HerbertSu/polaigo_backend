@@ -40,7 +40,7 @@ const insertIntoTable_roll_call_votes_hr = async (rollDataClerk, congVote, postg
  */
 let upsertQueryRaw = (tableName, columnName, columnListFromSQL, conflict="", action="DO NOTHING" ) =>{
     let valuesList = columnListFromSQL.map((columnObj)=>{
-        return "('" + Object.values(columnObj)[0] + "')";
+        return "('" + Object.values(columnObj)[ACCESS_ARRAY] + "')";
     });
     let valuesString = valuesList.join(",")
     let upsert = `INSERT INTO ${tableName} (${columnName}) VALUES ${valuesString} ON CONFLICT ${conflict} ${action};`;
@@ -70,11 +70,44 @@ const fetchRepresentativeGivenDistrict = async (state, district, postgres) => {
             throw err;
         })
     return representative[ACCESS_ARRAY];
-}
+};
+
+/**
+ * Returns a list of values specified in columnsToReturn. The entries returned are values in tableA's columnToCompare that are not in tableB's columnToCompare. 
+ * @param {string} tableA Name of table who's missing values we want.
+ * @param {string} tableB Name of table who's values we are comparing tableA against.
+ * @param {Array} columnsToReturn List of column names as strings in tableA whose values we want.
+ * @param {string} columnToCompare Column whose values we want to compare tableA and tableB with. Column should be shared between both tables.
+ * @param {*} postgres 
+ * @returns A list of the values specified in columnsToReturn.
+ */
+const getColumnsOfTableANotInTableB = async (tableA, tableB, columnsToReturn, columnToCompare, postgres) => {
+
+    let tableADotColumns = columnsToReturn.map((column)=> {
+        return `${tableA}.${column}`
+    });
+
+    let listOfMissingValues = await postgres.column(tableADotColumns)
+        .select()
+        .from(tableA)
+        .leftJoin(tableB, function(){
+            this.on(`${tableA}.${columnToCompare}`, "=", `${tableB}.${columnToCompare}`)
+        })
+        .whereNull(`${tableB}.${columnToCompare}`)
+        .catch(err=>{
+            throw {
+                err,
+                message: 'Error located in getColumnsOfTableNotInTableB'
+            };
+        });
+
+    return listOfMissingValues;
+};
 
 
 module.exports = {
     insertIntoTable_roll_call_votes_hr,
     upsertQueryRaw,
     fetchRepresentativeGivenDistrict,
+    getColumnsOfTableANotInTableB,
 }

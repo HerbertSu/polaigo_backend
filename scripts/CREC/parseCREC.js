@@ -20,7 +20,10 @@ let fetchAndWriteCRECXMLFromDate = async (date) =>{
     if(!fs.existsSync(filepath)){
         try{
             let res = await fetch(`https://api.govinfo.gov/packages/CREC-${date}/mods?api_key=DEMO_KEY`);
-            let text = await res.text();
+            if(res.status == 404){
+                throw `404: No congressional records available for ${date}`;
+            };
+            let text = await res.text(); 
             fs.writeFileSync(filepath, text, err=>{
                 if(err){
                     console.log(err);
@@ -29,8 +32,11 @@ let fetchAndWriteCRECXMLFromDate = async (date) =>{
             })
         }catch(err){
             throw err;
-        }
+        };
     }
+    else {
+        console.warn(`File ${filepath} already exists.`);
+    };
     return filepath;
 }
 
