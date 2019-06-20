@@ -369,5 +369,5 @@ module.exports = {
     updateVoteHistoriesActiveBioGuideIds,
     getDateOfClerksMemberXML,
     compareDatesOfLastHRMembersUpdate
-}
+};
 
